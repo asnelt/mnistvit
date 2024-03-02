@@ -121,7 +121,7 @@ def predict_single_image(
     Returns:
         int: Predicted class label.
     """
-    data = image[None]
+    data = image.unsqueeze(0)  # Add batch dimension
     data = data.to(device)
     predicted = classify(model, data).cpu().item()
     return predicted
