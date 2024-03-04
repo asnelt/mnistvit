@@ -1,57 +1,76 @@
 from typing import List, Union, Dict
 from numbers import Number
 from torch import nn, Tensor, randn, cat
+import numpy as np
 
 
 class VisionTransformer(nn.Module):
 
-    def __init__(self, num_channels, height, width, patch_size, latent_size, num_layers,
-                 output_size, mlp_head_sizes):
+    def __init__(self, num_channels, input_sizes, patch_size, latent_size, num_layers,
+                 output_size, mlp_size, activation="gelu"):
         super().__init__()
-        self.embedding = Embedding(num_channels, height, width, patch_size, latent_size)
-        encoders = [TransformerEncoder(latent_size) for _ in range(num_layers)]
-        self.encoder_stack = nn.Sequential(encoders)
+        self.num_channels = num_channels
+        self.input_sizes = input_sizes
+        self.patch_size = patch_size
+        self.latent_size = latent_size
+        self.num_layers = num_layers
+        self.output_size = output_size
+        self.mlp_size = mlp_size
+        self.activation = activation
+        self.embedding = Embedding(num_channels, input_sizes, patch_size, latent_size)
+        layer_norm = nn.LayerNorm(latent_size)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=latent_size,
+                                                   nhead=num_heads,
+                                                   dim_feedforward=mlp_size,
+                                                   dropout=dropout,
+                                                   activation=activation,
+                                                   batch_first=True,
+                                                   norm_first=True)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers, layer_norm)
         self.mlp_head = MLP(input_size=latent_size, output_size=output_size,
-                            hidden_sizes=mlp_head_sizes)
+                            hidden_sizes=[mlp_size], dropout=dropout,
+                            activation=activation)
 
     def forward(self, data):
         data = self.embedding(data)
-        data = self.encoder_stack(data)
-        output = self.mlp_head(data)
+        data = self.encoder(data)
+        # Take encoder output corresponding to class_token
+        output = self.mlp_head(data[:, 0, :])
         return output
 
     def get_hyperparameters(self):
-        pass
+        hyperparameters = {
+            "num_channels": self.num_channels,
+            "input_sizes": self.input_sizes,
+            "patch_size":  self.patch_size,
+            "latent_size": self.latent_size,
+            "num_layers": self.num_layers,
+            "output_size": self.output_sizes,
+            "mlp_size": self.mlp_size,
+            "activation": self.activation,
+        }
+        return hyperparameters
 
 
 class Embedding(nn.Module):
 
-    def __init__(self, num_channels, height, width, patch_size, latent_size):
+    def __init__(self, num_channels, input_sizes, patch_size, latent_size):
         super().__init__()
         # Use Unfold to split the input image into patches
         self.unfold = nn.Unfold(kernel_size=patch_size, stride=patch_size)
-        num_patches = (height // patch_size) * (width // patch_size)
-        flattened_size = num_channels * patch_size ** 2
+        num_patches = np.prod(np.floor((input_sizes - patch_size - 2) / patch_size + 1))
+        flattened_size = num_channels * patch_size ** len(input_sizes)
         self.linear = nn.Linear(flattened_size, latent_size)
         self.class_token = nn.Parameter(randn(1, 1, latent_size))
         self.position_embeddings = nn.Parameter(randn(1, num_patches+1, latent_size))
 
     def forward(self, data):
         # Split images into patches and flatten into
-        # batch_size x num_patches x (num_channels * patch_size * patch_size)
+        # batch_size x num_patches x (num_channels * patch_size ** len(input_sizes))
         data = self.unfold(data).permute(0, 2, 1).contiguous()
         data = self.linear(data)
         output = cat(self.class_token, data, dim=1) + self.position_embeddings
         return output
-
-
-class TransformerEncoder(nn.Module):
-
-    def __init__(self, latent_size):
-        super().__init__()
-
-    def forward(self, data):
-        pass
 
 
 class MLP(nn.Module):
@@ -65,6 +84,8 @@ class MLP(nn.Module):
             hidden layer. If `None`, no dropout will be used. If single float, the
             same dropout probability will be used for all hidden layers.
             Default: `None`.
+        activation (str): Activation function string, either `'relu'` or `'gelu'`.
+            Default: `'relu'`.
     """
 
     def __init__(
@@ -73,6 +94,7 @@ class MLP(nn.Module):
         output_size: int,
         hidden_sizes: List[int] = None,
         dropout: Union[float, List[float]] = None,
+        activation: str = "relu",
     ) -> None:
         super().__init__()
         self.flatten = nn.Flatten()
@@ -92,14 +114,19 @@ class MLP(nn.Module):
         for i, layer in enumerate(layers):
             modules.append(layer)
             if i < len(layers) - 1:
-                modules.append(nn.ReLU())
+                if activation == "relu":
+                    modules.append(nn.ReLU())
+                elif activation == "gelu":
+                    modules.append(nn.GELU())
+                else:
+                    raise ValueError("unknown activation")
                 if len(dropout_modules) > i:
                     modules.append(dropout_modules[i])
-        self.linear_relu_stack = nn.Sequential(*modules)
+        self.linear_stack = nn.Sequential(*modules)
 
     def forward(self, data: Tensor) -> Tensor:
         data = self.flatten(data)
-        output = self.linear_relu_stack(data)
+        output = self.linear_stack(data)
         return output
 
     def get_hyperparameters(self) -> Dict:
@@ -110,21 +137,26 @@ class MLP(nn.Module):
 
         Returns:
             dict: Hyperparameters including `'input_size'`, `'output_size'`,
-                `'hidden_sizes'` and `'dropout'`.
+                `'hidden_sizes'`, `'dropout'` and `'activation'`.
         """
-        input_size = self.linear_relu_stack[0].in_features
-        output_size = self.linear_relu_stack[-1].out_features
+        input_size = self.linear_stack[0].in_features
+        output_size = self.linear_stack[-1].out_features
         hidden_sizes = []
         dropout = []
-        for module in self.linear_relu_stack[:-1]:
+        for module in self.linear_stack[:-1]:
             if isinstance(module, nn.Linear):
                 hidden_sizes.append(module.out_features)
             if isinstance(module, nn.Dropout):
                 dropout.append(module.p)
+        if hidden_sizes and isinstance(self.linear_stack[1], nn.GELU):
+            activation = "gelu"
+        else:
+            activation = "relu"
         hyperparameters = {
             "input_size": input_size,
             "output_size": output_size,
             "hidden_sizes": hidden_sizes,
             "dropout": dropout,
+            "activation": activation,
         }
         return hyperparameters
