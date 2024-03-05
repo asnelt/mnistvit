@@ -8,7 +8,7 @@ FILE_LIKE: TypeAlias = Union[str, PathLike, BinaryIO, IO[bytes]]
 
 
 def save_model(model: VisionTransformer, model_file: FILE_LIKE = "model.pt") -> None:
-    """Saves the vision transformer model, including hyperparameters, to a file.
+    """Saves the vision transformer model, including model keyword arguments, to a file.
 
     Args:
         model (mnistvit.model.VisionTransformer): The model to save.
@@ -16,7 +16,7 @@ def save_model(model: VisionTransformer, model_file: FILE_LIKE = "model.pt") -> 
             Default: `'model.pt'`.
     """
     model_dict = {
-        "model_kwargs": model.get_hyperparameters(),
+        "model_kwargs": model.get_init_kwargs(),
         "state_dict": model.state_dict(),
     }
     torch.save(model_dict, model_file)

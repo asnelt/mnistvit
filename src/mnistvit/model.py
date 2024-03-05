@@ -1,21 +1,23 @@
 from typing import List, Union, Dict
+from math import prod
 from numbers import Number
 from torch import nn, Tensor, randn, cat
-import numpy as np
 
 
 class VisionTransformer(nn.Module):
 
-    def __init__(self, num_channels, input_sizes, patch_size, latent_size, num_layers,
-                 output_size, mlp_size, activation="gelu"):
+    def __init__(self, num_channels, input_sizes, patch_size, latent_size, num_heads,
+                 num_layers, output_size, mlp_size, dropout, activation="gelu"):
         super().__init__()
         self.num_channels = num_channels
         self.input_sizes = input_sizes
         self.patch_size = patch_size
         self.latent_size = latent_size
+        self.num_heads = num_heads
         self.num_layers = num_layers
         self.output_size = output_size
         self.mlp_size = mlp_size
+        self.dropout = dropout
         self.activation = activation
         self.embedding = Embedding(num_channels, input_sizes, patch_size, latent_size)
         layer_norm = nn.LayerNorm(latent_size)
@@ -26,7 +28,8 @@ class VisionTransformer(nn.Module):
                                                    activation=activation,
                                                    batch_first=True,
                                                    norm_first=True)
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers, layer_norm)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers, layer_norm,
+                                             enable_nested_tensor=False)
         self.mlp_head = MLP(input_size=latent_size, output_size=output_size,
                             hidden_sizes=[mlp_size], dropout=dropout,
                             activation=activation)
@@ -38,18 +41,20 @@ class VisionTransformer(nn.Module):
         output = self.mlp_head(data[:, 0, :])
         return output
 
-    def get_hyperparameters(self):
-        hyperparameters = {
+    def get_init_kwargs(self):
+        kwargs = {
             "num_channels": self.num_channels,
             "input_sizes": self.input_sizes,
             "patch_size":  self.patch_size,
             "latent_size": self.latent_size,
+            "num_heads": self.num_heads,
             "num_layers": self.num_layers,
             "output_size": self.output_sizes,
             "mlp_size": self.mlp_size,
+            "dropout": self.dropout,
             "activation": self.activation,
         }
-        return hyperparameters
+        return kwargs
 
 
 class Embedding(nn.Module):
@@ -58,7 +63,8 @@ class Embedding(nn.Module):
         super().__init__()
         # Use Unfold to split the input image into patches
         self.unfold = nn.Unfold(kernel_size=patch_size, stride=patch_size)
-        num_patches = np.prod(np.floor((input_sizes - patch_size - 2) / patch_size + 1))
+        num_patches = prod([(input_size - patch_size - 2) // patch_size + 1
+                            for input_size in input_sizes])
         flattened_size = num_channels * patch_size ** len(input_sizes)
         self.linear = nn.Linear(flattened_size, latent_size)
         self.class_token = nn.Parameter(randn(1, 1, latent_size))
@@ -129,14 +135,14 @@ class MLP(nn.Module):
         output = self.linear_stack(data)
         return output
 
-    def get_hyperparameters(self) -> Dict:
-        """Collects all hyperparameters of the object.
+    def get_init_kwargs(self) -> Dict:
+        """Collects all `__init__` keyword arguments of the object.
 
         The return dictionary can be used as keyword arguments to initialize a new
-        object with the same hyperparameters.
+        object with the same properties.
 
         Returns:
-            dict: Hyperparameters including `'input_size'`, `'output_size'`,
+            dict: Keyword arguments including `'input_size'`, `'output_size'`,
                 `'hidden_sizes'`, `'dropout'` and `'activation'`.
         """
         input_size = self.linear_stack[0].in_features
@@ -152,11 +158,11 @@ class MLP(nn.Module):
             activation = "gelu"
         else:
             activation = "relu"
-        hyperparameters = {
+        kwargs = {
             "input_size": input_size,
             "output_size": output_size,
             "hidden_sizes": hidden_sizes,
             "dropout": dropout,
             "activation": activation,
         }
-        return hyperparameters
+        return kwargs
