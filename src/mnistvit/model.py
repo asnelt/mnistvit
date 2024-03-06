@@ -6,33 +6,51 @@ from torch import nn, Tensor, randn, cat
 
 class VisionTransformer(nn.Module):
 
-    def __init__(self, num_channels, input_sizes, patch_size, latent_size, num_heads,
-                 num_layers, output_size, mlp_size, dropout, activation="gelu"):
+    def __init__(
+        self,
+        num_channels,
+        input_sizes,
+        output_size,
+        patch_size,
+        latent_size,
+        num_heads,
+        num_layers,
+        mlp_size,
+        dropout=0,
+        activation="gelu",
+    ):
         super().__init__()
         self.num_channels = num_channels
         self.input_sizes = input_sizes
+        self.output_size = output_size
         self.patch_size = patch_size
         self.latent_size = latent_size
         self.num_heads = num_heads
         self.num_layers = num_layers
-        self.output_size = output_size
         self.mlp_size = mlp_size
         self.dropout = dropout
         self.activation = activation
         self.embedding = Embedding(num_channels, input_sizes, patch_size, latent_size)
         layer_norm = nn.LayerNorm(latent_size)
-        encoder_layer = nn.TransformerEncoderLayer(d_model=latent_size,
-                                                   nhead=num_heads,
-                                                   dim_feedforward=mlp_size,
-                                                   dropout=dropout,
-                                                   activation=activation,
-                                                   batch_first=True,
-                                                   norm_first=True)
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers, layer_norm,
-                                             enable_nested_tensor=False)
-        self.mlp_head = MLP(input_size=latent_size, output_size=output_size,
-                            hidden_sizes=[mlp_size], dropout=dropout,
-                            activation=activation)
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=latent_size,
+            nhead=num_heads,
+            dim_feedforward=mlp_size,
+            dropout=dropout,
+            activation=activation,
+            batch_first=True,
+            norm_first=True,
+        )
+        self.encoder = nn.TransformerEncoder(
+            encoder_layer, num_layers, layer_norm, enable_nested_tensor=False
+        )
+        self.mlp_head = MLP(
+            input_size=latent_size,
+            output_size=output_size,
+            hidden_sizes=[mlp_size],
+            dropout=dropout,
+            activation=activation,
+        )
 
     def forward(self, data):
         data = self.embedding(data)
@@ -45,11 +63,11 @@ class VisionTransformer(nn.Module):
         kwargs = {
             "num_channels": self.num_channels,
             "input_sizes": self.input_sizes,
-            "patch_size":  self.patch_size,
+            "output_size": self.output_size,
+            "patch_size": self.patch_size,
             "latent_size": self.latent_size,
             "num_heads": self.num_heads,
             "num_layers": self.num_layers,
-            "output_size": self.output_sizes,
             "mlp_size": self.mlp_size,
             "dropout": self.dropout,
             "activation": self.activation,
@@ -63,19 +81,24 @@ class Embedding(nn.Module):
         super().__init__()
         # Use Unfold to split the input image into patches
         self.unfold = nn.Unfold(kernel_size=patch_size, stride=patch_size)
-        num_patches = prod([(input_size - patch_size - 2) // patch_size + 1
-                            for input_size in input_sizes])
+        num_patches = prod(
+            [(input_size - patch_size) // patch_size + 1 for input_size in input_sizes]
+        )
         flattened_size = num_channels * patch_size ** len(input_sizes)
         self.linear = nn.Linear(flattened_size, latent_size)
         self.class_token = nn.Parameter(randn(1, 1, latent_size))
-        self.position_embeddings = nn.Parameter(randn(1, num_patches+1, latent_size))
+        self.position_embeddings = nn.Parameter(randn(1, num_patches + 1, latent_size))
 
     def forward(self, data):
         # Split images into patches and flatten into
         # batch_size x num_patches x (num_channels * patch_size ** len(input_sizes))
+        batch_size = data.shape[0]
         data = self.unfold(data).permute(0, 2, 1).contiguous()
         data = self.linear(data)
-        output = cat(self.class_token, data, dim=1) + self.position_embeddings
+        output = (
+            cat([self.class_token.expand(batch_size, -1, -1), data], dim=1)
+            + self.position_embeddings
+        )
         return output
 
 
