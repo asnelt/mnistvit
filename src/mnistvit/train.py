@@ -19,7 +19,7 @@ def train_mnist(
     Args:
         config (dict): Training configuration including `'batch_size'`, `'num_epochs'`,
             `'lr'`, `'patch_size'`, `'latent_size'`, `'num_heads'`, `'num_layers'`,
-            `'mlp_size'` and `'dropout'`.
+            `'mlp_encoder_size'`, `'mlp_head_size'` and `'dropout'`.
         data_dir (str): Directory of the MNIST dataset.
         use_validation (bool, optional): If true, sets aside a validation set from the
             training set, else uses all training samples for training. Default: `True`.
@@ -43,7 +43,8 @@ def train_mnist(
         latent_size=config["latent_size"],
         num_heads=config["num_heads"],
         num_layers=config["num_layers"],
-        mlp_size=config["mlp_size"],
+        mlp_encoder_size=config["mlp_encoder_size"],
+        mlp_head_size=config["mlp_head_size"],
         dropout=config["dropout"],
     )
     model = model.to(device)
@@ -157,9 +158,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--latent-size",
         type=int,
-        default=512,
+        default=64,
         metavar="D",
-        help="latent size of the vision transformer (default: 512)",
+        help="latent size of the vision transformer (default: 64)",
     )
     parser.add_argument(
         "--num-heads",
@@ -176,11 +177,18 @@ if __name__ == "__main__":
         help="number of encoder blocks (default: 4)",
     )
     parser.add_argument(
-        "--mlp-size",
+        "--mlp-encoder-size",
         type=int,
-        default=512,
+        default=128,
         metavar="H",
-        help="number of hidden units of MLPs (default: 512)",
+        help="number of hidden units of transformer encoder MLPs (default: 128)",
+    )
+    parser.add_argument(
+        "--mlp-head-size",
+        type=int,
+        default=256,
+        metavar="H",
+        help="number of hidden units of MLP head (default: 256)",
     )
     parser.add_argument(
         "--dropout",
@@ -213,7 +221,8 @@ if __name__ == "__main__":
         "latent_size": args.latent_size,
         "num_heads": args.num_heads,
         "num_layers": args.num_layers,
-        "mlp_size": args.mlp_size,
+        "mlp_encoder_size": args.mlp_encoder_size,
+        "mlp_head_size": args.mlp_head_size,
         "dropout": args.dropout,
     }
     train_mnist(

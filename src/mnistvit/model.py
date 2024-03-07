@@ -15,7 +15,8 @@ class VisionTransformer(nn.Module):
         latent_size,
         num_heads,
         num_layers,
-        mlp_size,
+        mlp_encoder_size,
+        mlp_head_size,
         dropout=0,
         activation="gelu",
     ):
@@ -27,7 +28,8 @@ class VisionTransformer(nn.Module):
         self.latent_size = latent_size
         self.num_heads = num_heads
         self.num_layers = num_layers
-        self.mlp_size = mlp_size
+        self.mlp_encoder_size = mlp_encoder_size
+        self.mlp_head_size = mlp_head_size
         self.dropout = dropout
         self.activation = activation
         self.embedding = Embedding(num_channels, input_sizes, patch_size, latent_size)
@@ -35,7 +37,7 @@ class VisionTransformer(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=latent_size,
             nhead=num_heads,
-            dim_feedforward=mlp_size,
+            dim_feedforward=mlp_encoder_size,
             dropout=dropout,
             activation=activation,
             batch_first=True,
@@ -44,10 +46,12 @@ class VisionTransformer(nn.Module):
         self.encoder = nn.TransformerEncoder(
             encoder_layer, num_layers, layer_norm, enable_nested_tensor=False
         )
+        if isinstance(mlp_head_size, Number):
+            mlp_head_size = [mlp_head_size]
         self.mlp_head = MLP(
             input_size=latent_size,
             output_size=output_size,
-            hidden_sizes=[mlp_size],
+            hidden_sizes=mlp_head_size,
             dropout=dropout,
             activation=activation,
         )
@@ -68,7 +72,8 @@ class VisionTransformer(nn.Module):
             "latent_size": self.latent_size,
             "num_heads": self.num_heads,
             "num_layers": self.num_layers,
-            "mlp_size": self.mlp_size,
+            "mlp_encoder_size": self.mlp_encoder_size,
+            "mlp_head_size": self.mlp_head_size,
             "dropout": self.dropout,
             "activation": self.activation,
         }
