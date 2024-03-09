@@ -1,2 +1,54 @@
-# mnistvit
-A PyTorch implementation of a vision transformer for training on MNIST
+# Python package mnistvit
+
+A PyTorch implementation of a vision transformer (ViT) for training on MNIST. The ViT
+architecture and learning parameters can be configured. For training, the package
+provides well performing default parameters. For testing, cross entropy loss and
+accuracy can be evaluated. Code for hyperparameter optimization is provided as well.
+
+
+## Requirements
+
+The package requires Python 3.10 or greater and additionally requires `torch` and
+`torchvision`. For hyperparameter optimization, additionally `ray[tune]` and `optuna`
+are required.
+
+
+## Installation
+
+To install the mnistvit package, run the following command in the parent directory of
+the repository:
+
+```
+pip install mnistvit
+```
+
+
+## Usage
+
+To train a model with default parameters:
+```
+python -m mnistvit.train
+```
+
+The script will produce a file `model.pt` containing the trained model. Use the `-h`
+argument for a list of options.
+
+To evaluate the test set accuracy of the `model.pt` model:
+```
+python -m mnistvit.predict --use-accuracy
+```
+
+To predict the class of the digit stored in the file `sample.jpg`:
+```
+python -m mnistvit.predict --file sample.jpg
+```
+
+For hyperparameter optimization with default search parameters:
+```
+python -m mnistvit.tune
+```
+
+
+## License
+
+mnistvit is released under the GPLv3 license, as found in the [LICENSE](LICENSE) file.
