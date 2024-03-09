@@ -19,7 +19,7 @@ def train_mnist(
     Args:
         config (dict): Training configuration including `'batch_size'`, `'num_epochs'`,
             `'lr'`, `'weight_decay'`, `'patch_size'`, `'latent_size'`, `'num_heads'`,
-            `'num_layers'`, `'mlp_encoder_size'`, `'mlp_head_size'` and `'dropout'`.
+            `'num_layers'`, `'encoder_size'`, `'head_size'` and `'dropout'`.
         data_dir (str): Directory of the MNIST dataset.
         use_validation (bool, optional): If true, sets aside a validation set from the
             training set, else uses all training samples for training. Default: `True`.
@@ -43,8 +43,8 @@ def train_mnist(
         latent_size=config["latent_size"],
         num_heads=config["num_heads"],
         num_layers=config["num_layers"],
-        mlp_encoder_size=config["mlp_encoder_size"],
-        mlp_head_size=config["mlp_head_size"],
+        encoder_size=config["encoder_size"],
+        head_size=config["head_size"],
         dropout=config["dropout"],
     )
     model = model.to(device)
@@ -187,14 +187,14 @@ if __name__ == "__main__":
         help="number of encoder blocks (default: 4)",
     )
     parser.add_argument(
-        "--mlp-encoder-size",
+        "--encoder-size",
         type=int,
         default=128,
         metavar="H",
         help="number of hidden units of transformer encoder MLPs (default: 128)",
     )
     parser.add_argument(
-        "--mlp-head-size",
+        "--head-size",
         type=int,
         default=256,
         metavar="H",
@@ -232,8 +232,8 @@ if __name__ == "__main__":
         "latent_size": args.latent_size,
         "num_heads": args.num_heads,
         "num_layers": args.num_layers,
-        "mlp_encoder_size": args.mlp_encoder_size,
-        "mlp_head_size": args.mlp_head_size,
+        "encoder_size": args.encoder_size,
+        "head_size": args.head_size,
         "dropout": args.dropout,
     }
     train_mnist(
