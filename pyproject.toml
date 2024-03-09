@@ -1,0 +1,35 @@
+[build-system]
+requires = ["flit_core>=3.2"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "mnistvit"
+version = "1.0.0"
+authors = [{name = "Arno Onken", email = "asnelt@asnelt.org"}]
+description = "A vision transformer for training on MNIST"
+readme = "README.md"
+license = {file="LICENSE"}
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "torchvision",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+keywords = ["vision", "transformer", "mnist"]
+
+[project.urls]
+"Homepage" = "https://github.com/asnelt/mnistvit"
+"Bug Tracker" = "https://github.com/asnelt/mnistvit/issues"
+
+[project.optional-dependencies]
+tune = [
+  "ray[tune]",
+  "optuna",
+]
