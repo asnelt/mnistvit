@@ -133,30 +133,30 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=32,
+        default=128,
         metavar="N",
-        help="input batch size for training (default: 32)",
+        help="input batch size for training (default: 128)",
     )
     parser.add_argument(
         "--num-epochs",
         type=int,
-        default=8,
+        default=64,
         metavar="N",
-        help="number of epochs to train (default: 8)",
+        help="number of epochs to train (default: 64)",
     )
     parser.add_argument(
         "--lr",
         type=float,
-        default=3e-4,
+        default=8e-4,
         metavar="R",
-        help="learning rate (default: 3e-4)",
+        help="learning rate (default: 8e-4)",
     )
     parser.add_argument(
         "--weight-decay",
         type=float,
-        default=0,
+        default=3e-2,
         metavar="R",
-        help="weight decay coefficient (default: 0)",
+        help="weight decay coefficient (default: 3e-2)",
     )
     parser.add_argument(
         "--patch-size",
@@ -168,37 +168,37 @@ if __name__ == "__main__":
     parser.add_argument(
         "--latent-size",
         type=int,
-        default=64,
+        default=256,
         metavar="D",
-        help="latent size of the vision transformer (default: 64)",
+        help="latent size of the vision transformer (default: 256)",
     )
     parser.add_argument(
         "--num-heads",
         type=int,
-        default=8,
+        default=16,
         metavar="N",
-        help="number of attention heads (default: 8)",
+        help="number of attention heads (default: 16)",
     )
     parser.add_argument(
         "--num-layers",
         type=int,
-        default=4,
+        default=8,
         metavar="L",
-        help="number of encoder blocks (default: 4)",
+        help="number of encoder blocks (default: 8)",
     )
     parser.add_argument(
         "--encoder-size",
         type=int,
-        default=128,
+        default=512,
         metavar="H",
-        help="number of hidden units of transformer encoder MLPs (default: 128)",
+        help="number of hidden units of transformer encoder MLPs (default: 512)",
     )
     parser.add_argument(
         "--head-size",
         type=int,
-        default=256,
+        default=128,
         metavar="H",
-        help="number of hidden units of MLP head (default: 256)",
+        help="number of hidden units of MLP head (default: 128)",
     )
     parser.add_argument(
         "--dropout",
