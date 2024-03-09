@@ -18,8 +18,8 @@ def train_mnist(
 
     Args:
         config (dict): Training configuration including `'batch_size'`, `'num_epochs'`,
-            `'lr'`, `'patch_size'`, `'latent_size'`, `'num_heads'`, `'num_layers'`,
-            `'mlp_encoder_size'`, `'mlp_head_size'` and `'dropout'`.
+            `'lr'`, `'weight_decay'`, `'patch_size'`, `'latent_size'`, `'num_heads'`,
+            `'num_layers'`, `'mlp_encoder_size'`, `'mlp_head_size'` and `'dropout'`.
         data_dir (str): Directory of the MNIST dataset.
         use_validation (bool, optional): If true, sets aside a validation set from the
             training set, else uses all training samples for training. Default: `True`.
@@ -55,6 +55,7 @@ def train_mnist(
         loss_fn,
         config["num_epochs"],
         config["lr"],
+        config["weight_decay"],
         val_loader,
         report_fn,
         device,
@@ -68,6 +69,7 @@ def train(
     loss_fn: torch.nn.Module,
     num_epochs: int,
     lr: float,
+    weight_decay: float,
     val_loader: torch.utils.data.DataLoader = None,
     report_fn: Callable = None,
     device: torch.device = "cpu",
@@ -83,6 +85,7 @@ def train(
         loss_fn (torch.nn.Module): Loss function for model training.
         num_epochs (int): The number of epochs to use.
         lr (float): Learning rate.
+        weight_decay (float): Weight decay coefficient.
         val_loader (torch.utils.data.DataLoader, optional): Validation data loader.
             Default: `None`.
         report_fn (callable, optional): A function for reporting the training state.
@@ -90,7 +93,7 @@ def train(
             model. Default: `None`.
         device (torch.device, optional): Device to train the model on. Default: `'cpu'`.
     """
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     for epoch in range(num_epochs):
         train_epoch(model, train_loader, loss_fn, optimizer, device)
         if val_loader is not None:
@@ -147,6 +150,13 @@ if __name__ == "__main__":
         default=3e-4,
         metavar="R",
         help="learning rate (default: 3e-4)",
+    )
+    parser.add_argument(
+        "--weight-decay",
+        type=float,
+        default=0,
+        metavar="R",
+        help="weight decay coefficient (default: 0)",
     )
     parser.add_argument(
         "--patch-size",
@@ -217,6 +227,7 @@ if __name__ == "__main__":
         "batch_size": args.batch_size,
         "num_epochs": args.num_epochs,
         "lr": args.lr,
+        "weight_decay": args.weight_decay,
         "patch_size": args.patch_size,
         "latent_size": args.latent_size,
         "num_heads": args.num_heads,
