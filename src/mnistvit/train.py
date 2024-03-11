@@ -1,10 +1,12 @@
 import argparse
+from typing import Callable, Dict
+
 import torch
-from typing import Dict, Callable
-from .preprocess import train_loaders_mnist
+
 from .model import VisionTransformer
-from .utils import save_model
 from .predict import prediction_loss
+from .preprocess import train_loaders_mnist
+from .utils import save_model
 
 
 def train_mnist(
@@ -22,12 +24,13 @@ def train_mnist(
             `'num_layers'`, `'encoder_size'`, `'head_size'` and `'dropout'`.
         data_dir (str): Directory of the MNIST dataset.
         use_validation (bool, optional): If true, sets aside a validation set from the
-            training set, else uses all training samples for training. Default: `True`.
+            training set, else uses all training samples for training.  Default: `True`.
         report_fn (callable, optional): A function for reporting the training state.
             The function must accept arguments for epoch number (`int`),
             validation loss (`float`) and model (`mnistvit.model.VisionTransformer`).
             Default: `None`.
-        device (torch.device, optional): Device to train the model on. Default: `'cpu'`.
+        device (torch.device, optional): Device to train the model on.
+            Default: `'cpu'`.
     """
     train_fraction = 0.8 if use_validation else 1.0
     train_loader, val_loader = train_loaders_mnist(
@@ -90,8 +93,9 @@ def train(
             Default: `None`.
         report_fn (callable, optional): A function for reporting the training state.
             The function must accept arguments for epoch number, validation loss and
-            model. Default: `None`.
-        device (torch.device, optional): Device to train the model on. Default: `'cpu'`.
+            model.  Default: `None`.
+        device (torch.device, optional): Device to train the model on.
+            Default: `'cpu'`.
     """
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     for epoch in range(num_epochs):
@@ -116,7 +120,7 @@ def train_epoch(
         train_loader (torch.utils.data.DataLoader): Training data loader.
         loss_fn (torch.nn.Module): Loss function for model training.
         optimizer (torch.optim.Optimizer): Optimizer for training.
-        device (torch.device, optional): Device to train the model on. Default: `'cpu'`.
+        device (torch.device, optional): Device to train the model on.  Default: `'cpu'`.
     """
     model.train()
     for data, target in train_loader:

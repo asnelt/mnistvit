@@ -1,21 +1,23 @@
-import os
 import argparse
-import torch
-from typing import Dict
+import os
 from tempfile import TemporaryDirectory
-from ray import tune, train
-from ray.tune.search.optuna import OptunaSearch
+from typing import Dict
+
+import torch
+from ray import train, tune
 from ray.tune.schedulers import ASHAScheduler
+from ray.tune.search.optuna import OptunaSearch
+
 from .model import VisionTransformer
 from .train import train_mnist
-from .utils import save_model, load_model
+from .utils import load_model, save_model
 
 
 def objective(config: Dict, data_dir: str) -> None:
     """Objective function of the hyperparameter tuning.
 
     Trains a vision transformer on MNIST according to the configuration and reports the
-    mean loss. Also saves checkpoints to `'checkpoint.pt'` files. Checkpoints contain
+    mean loss.  Also saves checkpoints to `'checkpoint.pt'` files.  Checkpoints contain
     saved models as well as `'epoch'` metadata.
 
     Args:
@@ -42,8 +44,8 @@ def fit(num_samples: int, num_epochs: int, resources: Dict = None) -> None:
     """Tunes hyperparameters of a vision transformer to MNIST.
 
     Selects the checkpoint with the best validation performance and prints the best
-    result and the best checkpoint metadata. The best model is then saved to the
-    default model file name. Keeps one checkpoint per trial.
+    result and the best checkpoint metadata.  The best model is then saved to the
+    default model file name.  Keeps one checkpoint per trial.
 
     Args:
         num_samples (int): The number of hyperparameter configurations to try.

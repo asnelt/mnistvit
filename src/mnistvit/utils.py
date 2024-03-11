@@ -1,7 +1,9 @@
-import torch
 from os import PathLike
-from typing import Union, BinaryIO, IO
+from typing import IO, BinaryIO, Union
+
+import torch
 from typing_extensions import TypeAlias
+
 from .model import VisionTransformer
 
 FILE_LIKE: TypeAlias = Union[str, PathLike, BinaryIO, IO[bytes]]
@@ -30,7 +32,7 @@ def load_model(
     Args:
         model_file (FILE_LIKE, optional): File name to load the model from.
             Default: `'model.pt'`.
-        device (torch.device, optional): Device to load the model to. Default: `'cpu'`.
+        device (torch.device, optional): Device to load the model to.  Default: `'cpu'`.
 
     Returns:
         mnistvit.model.VisionTransformer: The loaded model.

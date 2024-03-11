@@ -1,8 +1,10 @@
 import argparse
-import torch
 from typing import Dict
+
+import torch
+
+from .preprocess import read_digit_image, test_loader_mnist
 from .utils import FILE_LIKE, load_model
-from .preprocess import test_loader_mnist, read_digit_image
 
 
 def test_mnist(

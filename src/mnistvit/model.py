@@ -1,7 +1,8 @@
-from typing import List, Dict
 from math import prod
 from numbers import Number
-from torch import nn, Tensor, randn, cat
+from typing import Dict, List
+
+from torch import Tensor, cat, nn, randn
 
 
 class VisionTransformer(nn.Module):
@@ -115,7 +116,7 @@ class VisionTransformer(nn.Module):
 class Embedding(nn.Module):
     """An embedding for a vision transformer.
 
-    Splits the input into patches, and projects the patches. Also adds a class token
+    Splits the input into patches, and projects the patches.  Also adds a class token
     and a position embedding.
 
     Args:
@@ -123,7 +124,7 @@ class Embedding(nn.Module):
         input_sizes (list of int): Spatial sizes of the input.
         patch_size (int): Size of a patch in one dimension.
         latent_size (int): Size of the embedding.
-        dropout (float): Dropout probability. Default: 0.
+        dropout (float): Dropout probability.  Default: 0.
     """
 
     def __init__(
@@ -165,9 +166,9 @@ class MLP(nn.Module):
     Args:
         input_size (int): Size of the input layer.
         output_size (int): Size of the output layer.
-        hidden_sizes (list of int, optional): Sizes of hidden layers. Default: `None`.
+        hidden_sizes (list of int, optional): Sizes of hidden layers.  Default: `None`.
         dropout (float or list of float, optional): Dropout probabilities of each
-            hidden layer. If `None`, no dropout will be used. If single float, the
+            hidden layer.  If `None`, no dropout will be used.  If single float, the
             same dropout probability will be used for all hidden layers.
             Default: `None`.
         activation (str): Activation function string, either `'relu'` or `'gelu'`.

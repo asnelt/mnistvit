@@ -1,8 +1,10 @@
-import torch
 from typing import Tuple
+
+import torch
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
-from torchvision.io import read_image, ImageReadMode
+from torchvision.io import ImageReadMode, read_image
+
 from .utils import FILE_LIKE
 
 
@@ -31,7 +33,7 @@ def train_loaders_mnist(
     Args:
         data_dir (str): Directory of the MNIST dataset.
         batch_size (int): Size of the batches of the training loaders.
-        train_fraction (float): Fraction of the set used for the training loader. The
+        train_fraction (float): Fraction of the set used for the training loader.  The
             remainder is used for the validation loader.
 
     Returns:
@@ -71,7 +73,7 @@ def test_loader_mnist(data_dir: str, batch_size: int) -> torch.utils.data.DataLo
 def read_digit_image(file: FILE_LIKE) -> torch.FloatTensor:
     """Loads a single digit image from a file.
 
-    Center crops and resizes the image to 28 by 28 pixels. Also inverts the image if
+    Center crops and resizes the image to 28 by 28 pixels.  Also inverts the image if
     there are more bright than dark pixels.
 
     Args:
