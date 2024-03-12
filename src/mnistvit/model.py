@@ -206,7 +206,7 @@ class MLP(nn.Module):
                 elif activation == "gelu":
                     modules.append(nn.GELU())
                 else:
-                    raise ValueError("unknown activation")
+                    raise ValueError(f"unknown activation '{activation}'")
                 if len(dropout_modules) > i:
                     modules.append(dropout_modules[i])
         self.linear_stack = nn.Sequential(*modules)
@@ -235,10 +235,12 @@ class MLP(nn.Module):
                 hidden_sizes.append(module.out_features)
             if isinstance(module, nn.Dropout):
                 dropout.append(module.p)
-        if hidden_sizes and isinstance(self.linear_stack[1], nn.GELU):
+        if not hidden_sizes or isinstance(self.linear_stack[1], nn.ReLU):
+            activation = "relu"
+        elif isinstance(self.linear_stack[1], nn.GELU):
             activation = "gelu"
         else:
-            activation = "relu"
+            raise RuntimeError(f"activation not supported by module")
         kwargs = {
             "input_size": input_size,
             "output_size": output_size,
