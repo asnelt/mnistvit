@@ -50,7 +50,7 @@ def fit(num_samples: int, num_epochs: int, resources: Dict = None) -> None:
     Args:
         num_samples (int): The number of hyperparameter configurations to try.
         num_epochs (int): The number of epochs per optimization.
-        resources (dict, optional): Resource configuration per trial.
+        resources (dict, optional): Resource configuration per trial.  Default: `None`.
     """
     search_space = {
         "batch_size": tune.choice([32, 64, 128, 256]),

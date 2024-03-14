@@ -120,7 +120,8 @@ def train_epoch(
         train_loader (torch.utils.data.DataLoader): Training data loader.
         loss_fn (torch.nn.Module): Loss function for model training.
         optimizer (torch.optim.Optimizer): Optimizer for training.
-        device (torch.device, optional): Device to train the model on.  Default: `'cpu'`.
+        device (torch.device, optional): Device to train the model on.
+            Default: `'cpu'`.
     """
     model.train()
     for data, target in train_loader:

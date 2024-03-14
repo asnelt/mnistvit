@@ -20,10 +20,10 @@ class VisionTransformer(nn.Module):
         num_layers (int): Number of encoder blocks.
         encoder_size (int): Number of hidden units in each encoder MLP.
         head_size (int or list of int): Sizes of hidden layers in MLP head.
-        dropout (float): Dropout probabilities of embedding, encoder and MLP head.
-            Default: 0.
-        activation (str): Activation function string, either `'relu'` or `'gelu'`.
-            Default: `'gelu'`.
+        dropout (float, optional): Dropout probabilities of embedding, encoder and MLP
+            head.  Default: 0.
+        activation (str, optional): Activation function string, either `'relu'` or
+            `'gelu'`.  Default: `'gelu'`.
     """
 
     def __init__(
@@ -124,7 +124,7 @@ class Embedding(nn.Module):
         input_sizes (list of int): Spatial sizes of the input.
         patch_size (int): Size of a patch in one dimension.
         latent_size (int): Size of the embedding.
-        dropout (float): Dropout probability.  Default: 0.
+        dropout (float, optional): Dropout probability.  Default: 0.
     """
 
     def __init__(
@@ -171,8 +171,8 @@ class MLP(nn.Module):
             hidden layer.  If `None`, no dropout will be used.  If single float, the
             same dropout probability will be used for all hidden layers.
             Default: `None`.
-        activation (str): Activation function string, either `'relu'` or `'gelu'`.
-            Default: `'relu'`.
+        activation (str, optional): Activation function string, either `'relu'` or
+            `'gelu'`.  Default: `'relu'`.
     """
 
     def __init__(

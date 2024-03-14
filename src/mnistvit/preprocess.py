@@ -33,8 +33,8 @@ def train_loaders_mnist(
     Args:
         data_dir (str): Directory of the MNIST dataset.
         batch_size (int): Size of the batches of the training loaders.
-        train_fraction (float): Fraction of the set used for the training loader.  The
-            remainder is used for the validation loader.
+        train_fraction (float, optional): Fraction of the set used for the training
+            loader.  The remainder is used for the validation loader.  Default: 1.0.
 
     Returns:
         tuple: Training loader and validation loader, where the latter is `None` if
