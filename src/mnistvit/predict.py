@@ -14,7 +14,7 @@ def test_mnist(
     use_accuracy: bool = True,
     device: torch.device = "cpu",
 ) -> None:
-    """Loads a model from `'model.pt'`, tests it on MNIST and prints the results.
+    """Loads a model, tests it on MNIST and prints the results.
 
     Args:
         config (dict): Test configuration with `'batch_size'`.
@@ -38,7 +38,7 @@ def test_mnist(
 
 
 def predict_file(file: FILE_LIKE, device: torch.device = "cpu") -> int:
-    """Loads a model from `'model.pt'` and classifies a digit from an image file.
+    """Loads a model and classifies a digit from an image file.
 
     Args:
         file (FILE_LIKE): The image file.
