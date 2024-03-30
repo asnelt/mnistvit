@@ -40,6 +40,7 @@ def train_loaders_mnist(
         tuple: Training loader and validation loader, where the latter is `None` if
             `train_fraction` is 1.
     """
+    assert 0 <= train_fraction <= 1
     loader_kwargs = {"shuffle": True, "batch_size": batch_size}
     dataset = normalized_mnist(data_dir, train=True)
     if train_fraction == 1.0:
