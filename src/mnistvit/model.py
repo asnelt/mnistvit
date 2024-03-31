@@ -22,8 +22,10 @@ class VisionTransformer(nn.Module):
         head_size (int or list of int): Sizes of hidden layers in MLP head.
         dropout (float, optional): Dropout probabilities of embedding, encoder and MLP
             head.  Default: 0.
-        activation (str, optional): Activation function string, either `'relu'` or
-            `'gelu'`.  Default: `'gelu'`.
+        encoder_activation (str, optional): Encoder activation function string, either
+            `'relu'` or `'gelu'`.  Default: `'gelu'`.
+        head_activation (str, optional): MLP head activation function string, `'relu'`,
+            `'gelu'` or `'tanh'`.  Default: `'gelu'`.
     """
 
     def __init__(
@@ -38,20 +40,24 @@ class VisionTransformer(nn.Module):
         encoder_size: int,
         head_size: int | List[int],
         dropout: float = 0,
-        activation: str = "gelu",
+        encoder_activation: str = "gelu",
+        head_activation: str = "gelu",
     ) -> None:
         super().__init__()
-        self.num_channels = num_channels
-        self.input_sizes = input_sizes
-        self.output_size = output_size
-        self.patch_size = patch_size
-        self.latent_size = latent_size
-        self.num_heads = num_heads
-        self.num_layers = num_layers
-        self.encoder_size = encoder_size
-        self.head_size = head_size
-        self.dropout = dropout
-        self.activation = activation
+        self.kwargs = {
+            "num_channels": num_channels,
+            "input_sizes": input_sizes,
+            "output_size": output_size,
+            "patch_size": patch_size,
+            "latent_size": latent_size,
+            "num_heads": num_heads,
+            "num_layers": num_layers,
+            "encoder_size": encoder_size,
+            "head_size": head_size,
+            "dropout": dropout,
+            "encoder_activation": encoder_activation,
+            "head_activation": head_activation,
+        }
         self.embedding = Embedding(
             num_channels, input_sizes, patch_size, latent_size, dropout
         )
@@ -61,7 +67,7 @@ class VisionTransformer(nn.Module):
             nhead=num_heads,
             dim_feedforward=encoder_size,
             dropout=dropout,
-            activation=activation,
+            activation=encoder_activation,
             batch_first=True,
             norm_first=True,
         )
@@ -75,7 +81,7 @@ class VisionTransformer(nn.Module):
             output_size=output_size,
             hidden_sizes=head_size,
             dropout=dropout,
-            activation=activation,
+            activation=head_activation,
         )
 
     def forward(self, data: Tensor) -> Tensor:
@@ -84,33 +90,6 @@ class VisionTransformer(nn.Module):
         # Take encoder output corresponding to class_token
         output = self.mlp_head(data[:, 0, :])
         return output
-
-    def get_init_kwargs(self):
-        """Collects all `__init__` keyword arguments of the object.
-
-        The return dictionary can be used as keyword arguments to initialize a new
-        object with the same properties.
-
-        Returns:
-            dict: Keyword arguments including `'num_channels'`, `'input_size'`,
-            `'output_size'`, `'patch_size'`, `'latent_size'`, `'num_heads'`,
-            `'num_layers'`, `'encoder_size'`, `'head_size'`, `'dropout'` and
-            `'activation'`.
-        """
-        kwargs = {
-            "num_channels": self.num_channels,
-            "input_sizes": self.input_sizes,
-            "output_size": self.output_size,
-            "patch_size": self.patch_size,
-            "latent_size": self.latent_size,
-            "num_heads": self.num_heads,
-            "num_layers": self.num_layers,
-            "encoder_size": self.encoder_size,
-            "head_size": self.head_size,
-            "dropout": self.dropout,
-            "activation": self.activation,
-        }
-        return kwargs
 
 
 class Embedding(nn.Module):
@@ -171,8 +150,8 @@ class MLP(nn.Module):
             hidden layer.  If `None`, no dropout will be used.  If single float, the
             same dropout probability will be used for all hidden layers.
             Default: `None`.
-        activation (str, optional): Activation function string, either `'relu'` or
-            `'gelu'`.  Default: `'relu'`.
+        activation (str, optional): Activation function string, `'relu'`, `'gelu'` or
+            `'tanh'`.  Default: `'relu'`.
     """
 
     def __init__(
@@ -205,6 +184,8 @@ class MLP(nn.Module):
                     modules.append(nn.ReLU())
                 elif activation == "gelu":
                     modules.append(nn.GELU())
+                elif activation == "tanh":
+                    modules.append(nn.Tanh())
                 else:
                     raise ValueError(f"unknown activation '{activation}'")
                 if len(dropout_modules) > i:
@@ -215,37 +196,3 @@ class MLP(nn.Module):
         data = self.flatten(data)
         output = self.linear_stack(data)
         return output
-
-    def get_init_kwargs(self) -> Dict:
-        """Collects all `__init__` keyword arguments of the object.
-
-        The return dictionary can be used as keyword arguments to initialize a new
-        object with the same properties.
-
-        Returns:
-            dict: Keyword arguments including `'input_size'`, `'output_size'`,
-                `'hidden_sizes'`, `'dropout'` and `'activation'`.
-        """
-        input_size = self.linear_stack[0].in_features
-        output_size = self.linear_stack[-1].out_features
-        hidden_sizes = []
-        dropout = []
-        for module in self.linear_stack[:-1]:
-            if isinstance(module, nn.Linear):
-                hidden_sizes.append(module.out_features)
-            if isinstance(module, nn.Dropout):
-                dropout.append(module.p)
-        if not hidden_sizes or isinstance(self.linear_stack[1], nn.ReLU):
-            activation = "relu"
-        elif isinstance(self.linear_stack[1], nn.GELU):
-            activation = "gelu"
-        else:
-            raise RuntimeError(f"activation not supported by module")
-        kwargs = {
-            "input_size": input_size,
-            "output_size": output_size,
-            "hidden_sizes": hidden_sizes,
-            "dropout": dropout,
-            "activation": activation,
-        }
-        return kwargs
