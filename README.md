@@ -2,15 +2,15 @@
 
 A PyTorch-only implementation of a vision transformer (ViT) for training on MNIST,
 achieving greater than 99% test accuracy with default parameters and without any data
-augmentation.  The ViT architecture and learning parameters can be configured easily.
-Code for hyperparameter optimization is provided as well.
+augmentation or pre-training.  The ViT architecture and learning parameters can be
+configured easily.  Code for hyperparameter optimization is provided as well.
 
 
 ## Requirements
 
-The package requires Python 3.10 or greater and additionally requires `torch` and
-`torchvision`.  The ViT itself requires `torch` only.  For hyperparameter optimization,
-additionally `ray[tune]` and `optuna` are required.
+The package requires Python 3.10 or greater and additionally requires the `torch` and
+`torchvision` packages.  The ViT itself requires `torch` only.  For hyperparameter
+optimization, additionally `ray[tune]` and `optuna` are required.
 
 
 ## Installation
