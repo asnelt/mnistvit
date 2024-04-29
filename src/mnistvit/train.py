@@ -20,8 +20,9 @@ def train_mnist(
 
     Args:
         config (dict): Training configuration including `'batch_size'`, `'num_epochs'`,
-            `'lr'`, `'weight_decay'`, `'patch_size'`, `'latent_size'`, `'num_heads'`,
-            `'num_layers'`, `'encoder_size'`, `'head_size'` and `'dropout'`.
+            `'lr'`, `'weight_decay'`, `'epoch_lr_restart'`, `'patch_size'`,
+            `'latent_size'`, `'num_heads'`, `'num_layers'`, `'encoder_size'`,
+            `'head_size'` and `'dropout'`.
         data_dir (str): Directory of the MNIST dataset.
         use_validation (bool, optional): If true, sets aside a validation set from the
             training set, else uses all training samples for training.  Default: `True`.
@@ -59,6 +60,7 @@ def train_mnist(
         config["num_epochs"],
         config["lr"],
         config["weight_decay"],
+        config["epoch_lr_restart"],
         val_loader,
         report_fn,
         device,
@@ -73,14 +75,15 @@ def train(
     num_epochs: int,
     lr: float,
     weight_decay: float,
+    epoch_lr_restart: int,
     val_loader: torch.utils.data.DataLoader = None,
     report_fn: Callable = None,
     device: torch.device = "cpu",
 ) -> None:
     """Main training function for model training.
 
-    Initializes an optimizer, contains the loop over epochs and eventually evaluates
-    validation performance.
+    Initializes an optimizer and learning rate scheduler, contains the loop over epochs
+    and eventually evaluates validation performance.
 
     Args:
         model (torch.nn.Module): Model to train.
@@ -89,6 +92,7 @@ def train(
         num_epochs (int): The number of epochs to use.
         lr (float): Learning rate.
         weight_decay (float): Weight decay coefficient.
+        epoch_lr_restart (int): Epoch for first learning rate scheduler restart.
         val_loader (torch.utils.data.DataLoader, optional): Validation data loader.
             Default: `None`.
         report_fn (callable, optional): A function for reporting the training state.
@@ -98,39 +102,25 @@ def train(
             Default: `'cpu'`.
     """
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        optimizer=optimizer,
+        T_0=epoch_lr_restart,
+    )
+    iters = len(train_loader)
     for epoch in range(num_epochs):
-        train_epoch(model, train_loader, loss_fn, optimizer, device)
+        model.train()
+        for step, (data, target) in enumerate(train_loader):
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data)
+            loss = loss_fn(output, target)
+            loss.backward()
+            optimizer.step()
+            scheduler.step(epoch + step / iters)
         if val_loader is not None:
             val_loss = prediction_loss(model, val_loader, loss_fn, device)
             if report_fn is not None:
                 report_fn(epoch, val_loss, model)
-
-
-def train_epoch(
-    model: torch.nn.Module,
-    train_loader: torch.utils.data.DataLoader,
-    loss_fn: torch.nn.Module,
-    optimizer: torch.optim.Optimizer,
-    device: torch.device = "cpu",
-) -> None:
-    """Training function for one training epoch.
-
-    Args:
-        model (torch.nn.Module): Model to train.
-        train_loader (torch.utils.data.DataLoader): Training data loader.
-        loss_fn (torch.nn.Module): Loss function for model training.
-        optimizer (torch.optim.Optimizer): Optimizer for training.
-        device (torch.device, optional): Device to train the model on.
-            Default: `'cpu'`.
-    """
-    model.train()
-    for data, target in train_loader:
-        data, target = data.to(device), target.to(device)
-        optimizer.zero_grad()
-        output = model(data)
-        loss = loss_fn(output, target)
-        loss.backward()
-        optimizer.step()
 
 
 if __name__ == "__main__":
@@ -162,6 +152,13 @@ if __name__ == "__main__":
         default=3e-2,
         metavar="R",
         help="weight decay coefficient (default: 3e-2)",
+    )
+    parser.add_argument(
+        "--epoch-lr-restart",
+        type=int,
+        default=16,
+        metavar="N",
+        help="epoch for first scheduler restart (default: 16)",
     )
     parser.add_argument(
         "--patch-size",
@@ -233,6 +230,7 @@ if __name__ == "__main__":
         "num_epochs": args.num_epochs,
         "lr": args.lr,
         "weight_decay": args.weight_decay,
+        "epoch_lr_restart": args.epoch_lr_restart,
         "patch_size": args.patch_size,
         "latent_size": args.latent_size,
         "num_heads": args.num_heads,

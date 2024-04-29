@@ -22,8 +22,9 @@ def objective(config: Dict, data_dir: str) -> None:
 
     Args:
         config (dict): Training configuration including `'batch_size'`, `'num_epochs'`,
-            `'lr'`, `'weight_decay'`, `'patch_size'`, `'latent_size'`, `'num_heads'`,
-            `'num_layers'`, `'encoder_size'`, `'head_size'` and `'dropout'`.
+            `'lr'`, `'weight_decay'`, `'epoch_lr_restart'`, `'patch_size'`,
+            `'latent_size'`, `'num_heads'`, `'num_layers'`, `'encoder_size'`,
+            `'head_size'` and `'dropout'`.
         data_dir (str): Directory of the MNIST training data.
     """
 
@@ -57,6 +58,7 @@ def fit(num_samples: int, num_epochs: int, resources: Dict = None) -> None:
         "num_epochs": num_epochs,
         "lr": tune.loguniform(1e-5, 0.01),
         "weight_decay": tune.loguniform(1e-4, 0.1),
+        "epoch_lr_restart": tune.choice([4, 8, 16, 32, 64]),
         "patch_size": tune.choice([2, 4, 7, 14]),
         "latent_size": tune.choice([2**i for i in range(4, 10)]),
         "num_heads": tune.choice([2, 4, 8, 16]),
