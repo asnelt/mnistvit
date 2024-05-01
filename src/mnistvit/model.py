@@ -1,6 +1,6 @@
 from math import prod
 from numbers import Number
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 from torch import Tensor, cat, nn, randn
 
@@ -40,8 +40,8 @@ class VisionTransformer(nn.Module):
         encoder_size: int,
         head_size: int | List[int],
         dropout: float = 0,
-        encoder_activation: str = "gelu",
-        head_activation: str = "gelu",
+        encoder_activation: Literal["relu", "gelu"] = "gelu",
+        head_activation: Literal["relu", "gelu", "tanh"] = "gelu",
     ) -> None:
         super().__init__()
         self.kwargs = {
@@ -160,7 +160,7 @@ class MLP(nn.Module):
         output_size: int,
         hidden_sizes: List[int] = None,
         dropout: float | List[float] = None,
-        activation: str = "relu",
+        activation: Literal["relu", "gelu", "tanh"] = "relu",
     ) -> None:
         super().__init__()
         self.flatten = nn.Flatten()
