@@ -78,7 +78,7 @@ def fit(num_samples: int, num_epochs: int, resources: Dict = None) -> None:
             checkpoint_config=train.CheckpointConfig(
                 checkpoint_score_attribute=metric,
                 checkpoint_score_order=mode,
-                num_to_keep=1,
+                num_to_keep=5,
             ),
         ),
         tune_config=tune.TuneConfig(
