@@ -5,7 +5,7 @@ import torch
 
 from .model import VisionTransformer
 from .predict import prediction_loss
-from .preprocess import train_loaders_mnist
+from .preprocess import get_train_loaders_mnist
 from .utils import save_model
 
 
@@ -13,6 +13,7 @@ def train_mnist(
     config: Dict,
     data_dir: str,
     use_validation: bool = True,
+    use_augmentation: bool = True,
     report_fn: Callable = None,
     device: torch.device = "cpu",
 ) -> None:
@@ -26,6 +27,8 @@ def train_mnist(
         data_dir (str): Directory of the MNIST dataset.
         use_validation (bool, optional): If true, sets aside a validation set from the
             training set, else uses all training samples for training.  Default: `True`.
+        use_augmentation (bool, optional): If true, augments the training dataset with
+            random affine transformations.  Default: `True`.
         report_fn (callable, optional): A function for reporting the training state.
             The function must accept arguments for epoch number (`int`),
             validation loss (`float`) and model (`mnistvit.model.VisionTransformer`).
@@ -34,10 +37,11 @@ def train_mnist(
             Default: `'cpu'`.
     """
     train_fraction = 0.8 if use_validation else 1.0
-    train_loader, val_loader = train_loaders_mnist(
-        data_dir,
-        config["batch_size"],
-        train_fraction,
+    train_loader, val_loader = get_train_loaders_mnist(
+        data_dir=data_dir,
+        batch_size=config["batch_size"],
+        train_fraction=train_fraction,
+        use_augmentation=use_augmentation,
     )
     model = VisionTransformer(
         num_channels=1,
@@ -216,6 +220,12 @@ if __name__ == "__main__":
         help="enables validation set",
     )
     parser.add_argument(
+        "--use-augmentation",
+        action="store_true",
+        default=False,
+        help="enables data augmentation",
+    )
+    parser.add_argument(
         "--seed", type=int, default=1, metavar="S", help="random seed (default: 1)"
     )
     parser.add_argument(
@@ -240,5 +250,9 @@ if __name__ == "__main__":
         "dropout": args.dropout,
     }
     train_mnist(
-        config, data_dir="data", use_validation=args.use_validation, device=device
+        config,
+        data_dir="data",
+        use_validation=args.use_validation,
+        use_augmentation=args.use_augmentation,
+        device=device,
     )

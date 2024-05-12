@@ -8,12 +8,19 @@ from torchvision.io import ImageReadMode, read_image
 from .utils import FILE_LIKE
 
 
-def normalized_mnist(data_dir: str, train: bool) -> Tuple:
-    """Normalizes the MNIST dataset with training mean and variance.
+def preprocess_mnist(
+    data_dir: str, train: bool, use_augmentation: bool = False
+) -> Tuple:
+    """Preprocesses the MNIST dataset.
+
+    Normalizes the MNIST dataset with training mean and variance and eventually
+    augments the dataset with random affine transformations.
 
     Args:
         data_dir (str): Directory of the MNIST dataset.
         train (bool): If true, loads the training set, else the test set.
+        use_augmentation (bool, optional): If true, augments the dataset with random
+            affine transformations.  Default: `False`.
 
     Returns:
         tuple: Image, target pairs.
@@ -21,12 +28,25 @@ def normalized_mnist(data_dir: str, train: bool) -> Tuple:
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
+    if use_augmentation:
+        # Data augmentation
+        transform = transforms.Compose(
+            [
+                transforms.RandomAffine(
+                    degrees=16, translate=(0.1, 0.1), scale=(0.9, 1.1)
+                ),
+                transform,
+            ]
+        )
     dataset = datasets.MNIST(data_dir, train=train, download=True, transform=transform)
     return dataset
 
 
-def train_loaders_mnist(
-    data_dir: str, batch_size: int, train_fraction: float = 1.0
+def get_train_loaders_mnist(
+    data_dir: str,
+    batch_size: int,
+    train_fraction: float = 1.0,
+    use_augmentation: bool = True,
 ) -> Tuple:
     """Training loaders of the MNIST dataset.
 
@@ -35,6 +55,8 @@ def train_loaders_mnist(
         batch_size (int): Size of the batches of the training loaders.
         train_fraction (float, optional): Fraction of the set used for the training
             loader.  The remainder is used for the validation loader.  Default: 1.0.
+        use_augmentation (bool, optional): If true, augments the dataset with random
+            affine transformations.  Default: `True`.
 
     Returns:
         tuple: Training loader and validation loader, where the latter is `None` if
@@ -42,7 +64,7 @@ def train_loaders_mnist(
     """
     assert 0 <= train_fraction <= 1
     loader_kwargs = {"shuffle": True, "batch_size": batch_size}
-    dataset = normalized_mnist(data_dir, train=True)
+    dataset = preprocess_mnist(data_dir, train=True, use_augmentation=use_augmentation)
     if train_fraction == 1.0:
         train_loader = DataLoader(dataset, **loader_kwargs)
         val_loader = None
@@ -56,7 +78,9 @@ def train_loaders_mnist(
     return train_loader, val_loader
 
 
-def test_loader_mnist(data_dir: str, batch_size: int) -> torch.utils.data.DataLoader:
+def get_test_loader_mnist(
+    data_dir: str, batch_size: int
+) -> torch.utils.data.DataLoader:
     """Test loader of the MNIST dataset.
 
     Args:
@@ -66,7 +90,7 @@ def test_loader_mnist(data_dir: str, batch_size: int) -> torch.utils.data.DataLo
     Returns:
         torch.utils.data.DataLoader: Test loader.
     """
-    dataset = normalized_mnist(data_dir, train=False)
+    dataset = preprocess_mnist(data_dir, train=False)
     loader = DataLoader(dataset, shuffle=False, batch_size=batch_size)
     return loader
 

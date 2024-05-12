@@ -3,7 +3,7 @@ from typing import Dict
 
 import torch
 
-from .preprocess import read_digit_image, test_loader_mnist
+from .preprocess import get_test_loader_mnist, read_digit_image
 from .utils import FILE_LIKE, load_model
 
 
@@ -27,7 +27,7 @@ def test_mnist(
             Default: `'cpu'`.
     """
     model = load_model(device=device)
-    test_loader = test_loader_mnist(data_dir, config["batch_size"])
+    test_loader = get_test_loader_mnist(data_dir, config["batch_size"])
     if use_loss:
         loss_fn = torch.nn.CrossEntropyLoss()
         loss = prediction_loss(model, test_loader, loss_fn, device)
