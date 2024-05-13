@@ -23,7 +23,7 @@ def objective(config: Dict, data_dir: str) -> None:
     Args:
         config (dict): Training configuration including `'batch_size'`, `'num_epochs'`,
             `'lr'`, `'weight_decay'`, `'epoch_lr_restart'`, `'patch_size'`,
-            `'latent_size'`, `'num_heads'`, `'num_layers'`, `'encoder_size'`,
+            `'latent_size_factor'`, `'num_heads'`, `'num_layers'`, `'encoder_size'`,
             `'head_size'` and `'dropout'`.
         data_dir (str): Directory of the MNIST training data.
     """
@@ -38,6 +38,9 @@ def objective(config: Dict, data_dir: str) -> None:
             train.report(metrics=metrics, checkpoint=checkpoint)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # latent size must be divisible by num_heads
+    config["latent_size"] = config["num_heads"] * config["latent_size_factor"]
+    del config["latent_size_factor"]
     train_mnist(config, data_dir=data_dir, device=device, report_fn=report_fn)
 
 
@@ -60,7 +63,7 @@ def fit(num_samples: int, num_epochs: int, resources: Dict = None) -> None:
         "weight_decay": tune.loguniform(1e-4, 0.1),
         "epoch_lr_restart": tune.choice([4, 8, 16, 32, 64]),
         "patch_size": tune.choice([2, 4, 7, 14]),
-        "latent_size": tune.choice([2**i for i in range(4, 10)]),
+        "latent_size_factor": tune.choice([4, 8, 16, 32]),
         "num_heads": tune.choice([2, 4, 8, 16]),
         "num_layers": tune.choice([1, 2, 4, 8]),
         "encoder_size": tune.choice([2**i for i in range(4, 10)]),
