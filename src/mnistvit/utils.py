@@ -9,13 +9,12 @@ from .model import VisionTransformer
 FILE_LIKE: TypeAlias = Union[str, PathLike, BinaryIO, IO[bytes]]
 
 
-def save_model(model: VisionTransformer, model_file: FILE_LIKE = "model.pth") -> None:
+def save_model(model: VisionTransformer, model_file: FILE_LIKE) -> None:
     """Saves the vision transformer model, including model keyword arguments, to a file.
 
     Args:
         model (mnistvit.model.VisionTransformer): The model to save.
-        model_file (FILE_LIKE, optional): File name to save the model to.
-            Default: `'model.pth'`.
+        model_file (FILE_LIKE): File name to save the model to.
     """
     model_dict = {
         "kwargs": model.kwargs,
@@ -25,13 +24,12 @@ def save_model(model: VisionTransformer, model_file: FILE_LIKE = "model.pth") ->
 
 
 def load_model(
-    model_file: FILE_LIKE = "model.pth", device: torch.device = "cpu"
+    model_file: FILE_LIKE, device: torch.device = "cpu"
 ) -> VisionTransformer:
     """Loads the model from a file.
 
     Args:
-        model_file (FILE_LIKE, optional): File name to load the model from.
-            Default: `'model.pth'`.
+        model_file (FILE_LIKE): File name to load the model from.
         device (torch.device, optional): Device to load the model to.  Default: `'cpu'`.
 
     Returns:

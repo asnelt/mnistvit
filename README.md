@@ -31,17 +31,17 @@ To train a model with default parameters:
 python -m mnistvit.train
 ```
 
-The script will produce a file `model.pth` containing the trained model.  Use the `-h`
+The script will produce a file `model.pt` containing the trained model.  Use the `-h`
 argument for a list of options.
 
-To evaluate the test set accuracy of the `model.pth` model:
+To evaluate the test set accuracy of the model stored in`model.pt`:
 ```
 python -m mnistvit.predict --use-accuracy
 ```
 
 To predict the class of the digit stored in the file `sample.jpg`:
 ```
-python -m mnistvit.predict --file sample.jpg
+python -m mnistvit.predict --image-file sample.jpg
 ```
 
 For hyperparameter optimization with default search parameters:

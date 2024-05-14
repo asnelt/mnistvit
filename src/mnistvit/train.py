@@ -6,12 +6,13 @@ import torch
 from .model import VisionTransformer
 from .predict import prediction_loss
 from .preprocess import get_train_loaders_mnist
-from .utils import save_model
+from .utils import FILE_LIKE, save_model
 
 
 def train_mnist(
     config: Dict,
     data_dir: str,
+    model_file: FILE_LIKE,
     use_validation: bool = True,
     use_augmentation: bool = True,
     report_fn: Callable = None,
@@ -25,6 +26,7 @@ def train_mnist(
             `'latent_size'`, `'num_heads'`, `'num_layers'`, `'encoder_size'`,
             `'head_size'` and `'dropout'`.
         data_dir (str): Directory of the MNIST dataset.
+        model_file (FILE_LIKE): File name to save the model to.
         use_validation (bool, optional): If true, sets aside a validation set from the
             training set, else uses all training samples for training.  Default: `True`.
         use_augmentation (bool, optional): If true, augments the training dataset with
@@ -69,7 +71,7 @@ def train_mnist(
         report_fn,
         device,
     )
-    save_model(model)
+    save_model(model, model_file)
 
 
 def train(
@@ -214,6 +216,13 @@ if __name__ == "__main__":
         help="dropout rate (default: 0.1)",
     )
     parser.add_argument(
+        "--model-file",
+        type=str,
+        default="model.pt",
+        metavar="FILE",
+        help="file to save the model to (default: 'model.pt')",
+    )
+    parser.add_argument(
         "--use-validation",
         action="store_true",
         default=False,
@@ -252,6 +261,7 @@ if __name__ == "__main__":
     train_mnist(
         config,
         data_dir="data",
+        model_file=args.model_file,
         use_validation=args.use_validation,
         use_augmentation=args.use_augmentation,
         device=device,

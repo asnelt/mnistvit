@@ -10,6 +10,7 @@ from .utils import FILE_LIKE, load_model
 def test_mnist(
     config: Dict,
     data_dir: str,
+    model_file: FILE_LIKE,
     use_loss: bool = True,
     use_accuracy: bool = True,
     device: torch.device = "cpu",
@@ -19,6 +20,7 @@ def test_mnist(
     Args:
         config (dict): Test configuration with `'batch_size'`.
         data_dir (str): Directory of the MNIST dataset.
+        model_file (FILE_LIKE): File name to load the model from.
         use_loss (bool, optional): If true, evaluates the loss on the test set.
             Default: `True`.
         use_accuracy (bool, optional): If true, evaluates the accuracy on the test set.
@@ -26,7 +28,7 @@ def test_mnist(
         device (torch.device, optional): Device to evaluate the model on.
             Default: `'cpu'`.
     """
-    model = load_model(device=device)
+    model = load_model(model_file, device)
     test_loader = get_test_loader_mnist(data_dir, config["batch_size"])
     if use_loss:
         loss_fn = torch.nn.CrossEntropyLoss()
@@ -37,19 +39,22 @@ def test_mnist(
         print("Test accuracy: ", acc)
 
 
-def predict_file(file: FILE_LIKE, device: torch.device = "cpu") -> int:
+def predict_file(
+    image_file: FILE_LIKE, model_file: FILE_LIKE, device: torch.device = "cpu"
+) -> int:
     """Loads a model and classifies a digit from an image file.
 
     Args:
-        file (FILE_LIKE): The image file.
+        image_file (FILE_LIKE): The image file.
+        model_file (FILE_LIKE): File name to load the model from.
         device (torch.device, optional): Device to evaluate the model on.
             Default: `'cpu'`.
 
     Returns:
         int: Predicted class label.
     """
-    model = load_model(device=device)
-    image = read_digit_image(file)
+    model = load_model(model_file, device)
+    image = read_digit_image(image_file)
     predicted = predict_single_image(model, image, device)
     return predicted
 
@@ -180,7 +185,7 @@ def eval_output(model: torch.nn.Module, data: torch.utils.data.Sampler) -> torch
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MNIST Prediction")
     parser.add_argument(
-        "--file",
+        "--image-file",
         type=str,
         default=None,
         metavar="FILE",
@@ -192,6 +197,13 @@ if __name__ == "__main__":
         default=32,
         metavar="N",
         help="input batch size for testing (default: 32)",
+    )
+    parser.add_argument(
+        "--model-file",
+        type=str,
+        default="model.pt",
+        metavar="FILE",
+        help="file to load the model from (default: 'model.pt')",
     )
     parser.add_argument(
         "--use-loss",
@@ -214,12 +226,13 @@ if __name__ == "__main__":
     config = {
         "batch_size": args.batch_size,
     }
-    if args.file is not None:
-        predicted = predict_file(args.file, device)
+    if args.image_file is not None:
+        predicted = predict_file(args.image_file, args.model_file, device)
         print(predicted)
     test_mnist(
         config,
         data_dir="data",
+        model_file=args.model_file,
         use_loss=args.use_loss,
         use_accuracy=args.use_accuracy,
         device=device,

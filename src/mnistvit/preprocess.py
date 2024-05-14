@@ -95,19 +95,19 @@ def get_test_loader_mnist(
     return loader
 
 
-def read_digit_image(file: FILE_LIKE) -> torch.FloatTensor:
+def read_digit_image(image_file: FILE_LIKE) -> torch.FloatTensor:
     """Loads a single digit image from a file.
 
     Center crops and resizes the image to 28 by 28 pixels.  Also inverts the image if
     there are more bright than dark pixels.
 
     Args:
-        file (FILE_LIKE): The image file.
+        image_file (FILE_LIKE): The image file.
 
     Returns:
         torch.FloatTensor: The preprocessed digit image.
     """
-    image = read_image(file, mode=ImageReadMode.GRAY)
+    image = read_image(image_file, mode=ImageReadMode.GRAY)
     transform = transforms.Compose(
         [transforms.CenterCrop(min(image.size()[1:])), transforms.Resize([28, 28])]
     )

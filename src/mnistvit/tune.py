@@ -10,10 +10,10 @@ from ray.tune.search.optuna import OptunaSearch
 
 from .model import VisionTransformer
 from .train import train_mnist
-from .utils import load_model, save_model
+from .utils import FILE_LIKE, load_model, save_model
 
 
-def objective(config: Dict, data_dir: str) -> None:
+def objective(config: Dict, data_dir: str, model_file: FILE_LIKE) -> None:
     """Objective function of the hyperparameter tuning.
 
     Trains a vision transformer on MNIST according to the configuration and reports the
@@ -26,6 +26,7 @@ def objective(config: Dict, data_dir: str) -> None:
             `'latent_size_factor'`, `'num_heads'`, `'num_layers'`, `'encoder_size'`,
             `'head_size'` and `'dropout'`.
         data_dir (str): Directory of the MNIST training data.
+        model_file (FILE_LIKE): File name to save the model to.
     """
 
     def report_fn(epoch: int, val_loss: float, model: VisionTransformer):
@@ -41,10 +42,18 @@ def objective(config: Dict, data_dir: str) -> None:
     # latent_size must be divisible by num_heads
     config["latent_size"] = config["num_heads"] * config["latent_size_factor"]
     del config["latent_size_factor"]
-    train_mnist(config, data_dir=data_dir, device=device, report_fn=report_fn)
+    train_mnist(
+        config,
+        data_dir=data_dir,
+        model_file=model_file,
+        device=device,
+        report_fn=report_fn,
+    )
 
 
-def fit(num_samples: int, num_epochs: int, resources: Dict = None) -> None:
+def fit(
+    num_samples: int, num_epochs: int, model_file: FILE_LIKE, resources: Dict = None
+) -> None:
     """Tunes hyperparameters of a vision transformer to MNIST.
 
     Selects the checkpoint with the best validation performance and prints the best
@@ -54,6 +63,7 @@ def fit(num_samples: int, num_epochs: int, resources: Dict = None) -> None:
     Args:
         num_samples (int): The number of hyperparameter configurations to try.
         num_epochs (int): The number of epochs per optimization.
+        model_file (FILE_LIKE): File name to save the model to.
         resources (dict, optional): Resource configuration per trial.  Default: `None`.
     """
     search_space = {
@@ -71,7 +81,9 @@ def fit(num_samples: int, num_epochs: int, resources: Dict = None) -> None:
         "dropout": tune.uniform(0, 0.5),
     }
     data_dir = os.path.abspath("data")
-    trainable = tune.with_parameters(objective, data_dir=data_dir)
+    trainable = tune.with_parameters(
+        objective, data_dir=data_dir, model_file=model_file
+    )
     metric, mode = "mean_loss", "min"
     if resources is not None:
         trainable = tune.with_resources(trainable, resources=resources)
@@ -103,7 +115,7 @@ def fit(num_samples: int, num_epochs: int, resources: Dict = None) -> None:
         model = load_model(os.path.join(checkpoint_dir, "checkpoint.pt"))
     print("Best result config: ", best_result.config)
     print("Best checkpoint: ", best_checkpoint.get_metadata())
-    save_model(model)
+    save_model(model, model_file)
 
 
 if __name__ == "__main__":
@@ -121,6 +133,13 @@ if __name__ == "__main__":
         default=64,
         metavar="N",
         help="number of epochs to train (default: 64)",
+    )
+    parser.add_argument(
+        "--model-file",
+        type=str,
+        default="model.pt",
+        metavar="FILE",
+        help="file to save the model to (default: 'model.pt')",
     )
     parser.add_argument(
         "--cpu-resource",
