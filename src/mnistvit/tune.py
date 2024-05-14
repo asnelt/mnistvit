@@ -38,7 +38,7 @@ def objective(config: Dict, data_dir: str) -> None:
             train.report(metrics=metrics, checkpoint=checkpoint)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # latent size must be divisible by num_heads
+    # latent_size must be divisible by num_heads
     config["latent_size"] = config["num_heads"] * config["latent_size_factor"]
     del config["latent_size_factor"]
     train_mnist(config, data_dir=data_dir, device=device, report_fn=report_fn)
