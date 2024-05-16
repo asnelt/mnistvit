@@ -118,7 +118,8 @@ def fit(
     save_model(model, model_file)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Processes command line arguments with tuning."""
     parser = argparse.ArgumentParser(description="MNIST Vision Transformer Tuning")
     parser.add_argument(
         "--num-samples",
@@ -165,3 +166,7 @@ if __name__ == "__main__":
         if args.gpu_resource is not None:
             resources["gpu"] = args.gpu_resource
     fit(args.num_samples, args.num_epochs, resources)
+
+
+if __name__ == "__main__":
+    main()

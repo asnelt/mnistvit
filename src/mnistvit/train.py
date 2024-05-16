@@ -129,7 +129,8 @@ def train(
                 report_fn(epoch, val_loss, model)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Processes command line arguments with training."""
     parser = argparse.ArgumentParser(description="MNIST Vision Transformer Training")
     parser.add_argument(
         "--batch-size",
@@ -266,3 +267,7 @@ if __name__ == "__main__":
         use_augmentation=args.use_augmentation,
         device=device,
     )
+
+
+if __name__ == "__main__":
+    main()

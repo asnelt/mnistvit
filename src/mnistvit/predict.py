@@ -182,7 +182,8 @@ def eval_output(model: torch.nn.Module, data: torch.utils.data.Sampler) -> torch
     return output
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Processes command line arguments with prediction."""
     parser = argparse.ArgumentParser(description="MNIST Prediction")
     parser.add_argument(
         "--image-file",
@@ -237,3 +238,7 @@ if __name__ == "__main__":
         use_accuracy=args.use_accuracy,
         device=device,
     )
+
+
+if __name__ == "__main__":
+    main()
