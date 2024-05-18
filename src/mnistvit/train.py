@@ -12,29 +12,35 @@ from .utils import FILE_LIKE, save_model
 def train_mnist(
     config: Dict,
     data_dir: str,
-    model_file: FILE_LIKE,
     use_validation: bool = True,
     use_augmentation: bool = True,
+    model_file: FILE_LIKE = None,
     report_fn: Callable = None,
+    resume_states: Dict = None,
     device: torch.device = "cpu",
 ) -> None:
-    """Trains a single vision transformer on MNIST and saves the model.
+    """Trains a single model on MNIST and eventually saves the model.
 
     Args:
         config (dict): Training configuration including `'batch_size'`, `'num_epochs'`,
             `'lr'`, `'weight_decay'`, `'epoch_lr_restart'`, `'patch_size'`,
-            `'latent_size'`, `'num_heads'`, `'num_layers'`, `'encoder_size'`,
+            `'num_heads'`, `'latent_size_multiplier'`, `'num_layers'`, `'encoder_size'`,
             `'head_size'` and `'dropout'`.
         data_dir (str): Directory of the MNIST dataset.
-        model_file (FILE_LIKE): File name to save the model to.
         use_validation (bool, optional): If true, sets aside a validation set from the
             training set, else uses all training samples for training.  Default: `True`.
         use_augmentation (bool, optional): If true, augments the training dataset with
             random affine transformations.  Default: `True`.
+        model_file (FILE_LIKE, optional): File name to save the model to.  If `None`
+            then the model is not saved.  Default: `None`.
         report_fn (callable, optional): A function for reporting the training state.
             The function must accept arguments for epoch number (`int`),
-            validation loss (`float`) and model (`mnistvit.model.VisionTransformer`).
-            Default: `None`.
+            training loss (`float`), validation loss (`float`),
+            model (`torch.nn.Module`),
+            optimizer (`torch.optim.Optimizer`) and
+            lr_scheduler (`torch.optim.lr_scheduler.LRScheduler`).  Default: `None`.
+        resume_states (dict, optional): Dictionary with states for `'epoch'`, `'model'`,
+            `'optimizer'` and `'lr_scheduler'`.  Default: `None`.
         device (torch.device, optional): Device to train the model on.
             Default: `'cpu'`.
     """
@@ -45,19 +51,9 @@ def train_mnist(
         train_fraction=train_fraction,
         use_augmentation=use_augmentation,
     )
-    model = VisionTransformer(
-        num_channels=1,
-        input_sizes=[28, 28],
-        output_size=10,
-        patch_size=config["patch_size"],
-        latent_size=config["latent_size"],
-        num_heads=config["num_heads"],
-        num_layers=config["num_layers"],
-        encoder_size=config["encoder_size"],
-        head_size=config["head_size"],
-        dropout=config["dropout"],
-    )
-    model = model.to(device)
+    model = init_mnist_model(config, device)
+    if resume_states is not None:
+        model.load_state_dict(resume_states["model"])
     loss_fn = torch.nn.CrossEntropyLoss()
     train(
         model,
@@ -69,9 +65,39 @@ def train_mnist(
         config["epoch_lr_restart"],
         val_loader,
         report_fn,
+        resume_states,
         device,
     )
-    save_model(model, model_file)
+    if model_file is not None:
+        save_model(model, model_file)
+
+
+def init_mnist_model(config: Dict, device: torch.device = "cpu") -> torch.nn.Module:
+    """Initializes a vision transformer for training on MNIST.
+
+    Args:
+        config (dict): Training configuration including `'patch_size'`, `'num_heads'`,
+            `'latent_size_multiplier'`, `'num_layers'`, `'encoder_size'`, `'head_size'`
+            and `'dropout'`.
+        device (torch.device, optional): Device to load the model on.
+            Default: `'cpu'`.
+    Returns:
+        torch.nn.Module: The initialized model.
+    """
+    model = VisionTransformer(
+        num_channels=1,
+        input_sizes=[28, 28],
+        output_size=10,
+        patch_size=config["patch_size"],
+        num_heads=config["num_heads"],
+        latent_size_multiplier=config["latent_size_multiplier"],
+        num_layers=config["num_layers"],
+        encoder_size=config["encoder_size"],
+        head_size=config["head_size"],
+        dropout=config["dropout"],
+    )
+    model = model.to(device)
+    return model
 
 
 def train(
@@ -84,6 +110,7 @@ def train(
     epoch_lr_restart: int,
     val_loader: torch.utils.data.DataLoader = None,
     report_fn: Callable = None,
+    resume_states: Dict = None,
     device: torch.device = "cpu",
 ) -> None:
     """Main training function for model training.
@@ -102,18 +129,29 @@ def train(
         val_loader (torch.utils.data.DataLoader, optional): Validation data loader.
             Default: `None`.
         report_fn (callable, optional): A function for reporting the training state.
-            The function must accept arguments for epoch number, validation loss and
-            model.  Default: `None`.
+            The function must accept arguments for epoch number (`int`),
+            training loss (`float`), validation loss (`float`),
+            model (`torch.nn.Module`),
+            optimizer (`torch.optim.Optimizer`) and
+            lr_scheduler (`torch.optim.lr_scheduler.LRScheduler`).  Default: `None`.
+        resume_states (dict, optional): Dictionary with states for `'epoch'`,
+            `'optimizer'` and `'lr_scheduler'`.  Default: `None`.
         device (torch.device, optional): Device to train the model on.
             Default: `'cpu'`.
     """
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer=optimizer,
         T_0=epoch_lr_restart,
     )
+    if resume_states is None:
+        start_epoch = 0
+    else:
+        start_epoch = resume_states["epoch"] + 1
+        optimizer.load_state_dict(resume_states["optimizer"])
+        lr_scheduler.load_state_dict(resume_states["lr_scheduler"])
     iters = len(train_loader)
-    for epoch in range(num_epochs):
+    for epoch in range(start_epoch, num_epochs):
         model.train()
         for step, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
@@ -122,11 +160,13 @@ def train(
             loss = loss_fn(output, target)
             loss.backward()
             optimizer.step()
-            scheduler.step(epoch + step / iters)
-        if val_loader is not None:
+            lr_scheduler.step(epoch + step / iters)
+        if val_loader is None:
+            val_loss = None
+        else:
             val_loss = prediction_loss(model, val_loader, loss_fn, device)
-            if report_fn is not None:
-                report_fn(epoch, val_loss, model)
+        if report_fn is not None:
+            report_fn(epoch, loss, val_loss, model, optimizer, lr_scheduler)
 
 
 def main() -> None:
@@ -135,37 +175,37 @@ def main() -> None:
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=128,
+        default=32,
         metavar="N",
-        help="input batch size for training (default: 128)",
+        help="input batch size for training (default: 32)",
     )
     parser.add_argument(
         "--num-epochs",
         type=int,
-        default=64,
+        default=60,
         metavar="N",
-        help="number of epochs to train (default: 64)",
+        help="number of epochs to train (default: 60)",
     )
     parser.add_argument(
         "--lr",
         type=float,
-        default=8e-4,
+        default=1e-4,
         metavar="R",
-        help="learning rate (default: 8e-4)",
+        help="learning rate (default: 1e-4)",
     )
     parser.add_argument(
         "--weight-decay",
         type=float,
-        default=3e-2,
+        default=2e-2,
         metavar="R",
-        help="weight decay coefficient (default: 3e-2)",
+        help="weight decay coefficient (default: 2e-2)",
     )
     parser.add_argument(
         "--epoch-lr-restart",
         type=int,
-        default=16,
+        default=22,
         metavar="N",
-        help="epoch for first scheduler restart (default: 16)",
+        help="epoch for first scheduler restart (default: 22)",
     )
     parser.add_argument(
         "--patch-size",
@@ -175,46 +215,46 @@ def main() -> None:
         help="single dimension size of an image patch (default: 4)",
     )
     parser.add_argument(
-        "--latent-size",
-        type=int,
-        default=256,
-        metavar="D",
-        help="latent size of the vision transformer (default: 256)",
-    )
-    parser.add_argument(
         "--num-heads",
         type=int,
-        default=16,
+        default=28,
         metavar="N",
-        help="number of attention heads (default: 16)",
+        help="number of attention heads (default: 28)",
+    )
+    parser.add_argument(
+        "--latent-size-multiplier",
+        type=int,
+        default=15,
+        metavar="M",
+        help="yields latent size when multiplied with num_heads (default: 15)",
     )
     parser.add_argument(
         "--num-layers",
         type=int,
-        default=8,
+        default=9,
         metavar="L",
-        help="number of encoder blocks (default: 8)",
+        help="number of encoder blocks (default: 9)",
     )
     parser.add_argument(
         "--encoder-size",
         type=int,
-        default=512,
+        default=615,
         metavar="H",
-        help="number of hidden units of transformer encoder MLPs (default: 512)",
+        help="number of hidden units of transformer encoder MLPs (default: 615)",
     )
     parser.add_argument(
         "--head-size",
         type=int,
-        default=128,
+        default=88,
         metavar="H",
-        help="number of hidden units of MLP head (default: 128)",
+        help="number of hidden units of MLP head (default: 88)",
     )
     parser.add_argument(
         "--dropout",
         type=float,
-        default=0.1,
+        default=6e-2,
         metavar="R",
-        help="dropout rate (default: 0.1)",
+        help="dropout rate (default: 6e-2)",
     )
     parser.add_argument(
         "--model-file",
@@ -230,10 +270,10 @@ def main() -> None:
         help="enables validation set",
     )
     parser.add_argument(
-        "--use-augmentation",
+        "--no-augmentation",
         action="store_true",
         default=False,
-        help="enables data augmentation",
+        help="disables data augmentation",
     )
     parser.add_argument(
         "--seed", type=int, default=1, metavar="S", help="random seed (default: 1)"
@@ -252,19 +292,37 @@ def main() -> None:
         "weight_decay": args.weight_decay,
         "epoch_lr_restart": args.epoch_lr_restart,
         "patch_size": args.patch_size,
-        "latent_size": args.latent_size,
         "num_heads": args.num_heads,
+        "latent_size_multiplier": args.latent_size_multiplier,
         "num_layers": args.num_layers,
         "encoder_size": args.encoder_size,
         "head_size": args.head_size,
         "dropout": args.dropout,
     }
+
+    # Define function for reporting training progress
+    def report_fn(
+        epoch: int,
+        train_loss: float,
+        val_loss: float,
+        model: torch.nn.Module,
+        optimizer: torch.optim.Optimizer,
+        lr_scheduler: torch.optim.lr_scheduler.LRScheduler,
+    ) -> None:
+        print(
+            f"epoch: {epoch+1}\t"
+            f"training loss: {train_loss}\t"
+            f"validation loss: {val_loss}"
+        )
+
+    use_augmentation = not args.no_augmentation
     train_mnist(
         config,
         data_dir="data",
-        model_file=args.model_file,
         use_validation=args.use_validation,
-        use_augmentation=args.use_augmentation,
+        use_augmentation=use_augmentation,
+        model_file=args.model_file,
+        report_fn=report_fn,
         device=device,
     )
 

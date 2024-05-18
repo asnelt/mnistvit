@@ -109,7 +109,10 @@ def read_digit_image(image_file: FILE_LIKE) -> torch.FloatTensor:
     """
     image = read_image(image_file, mode=ImageReadMode.GRAY)
     transform = transforms.Compose(
-        [transforms.CenterCrop(min(image.size()[1:])), transforms.Resize([28, 28])]
+        [
+            transforms.CenterCrop(min(image.size()[1:])),
+            transforms.Resize([28, 28]),
+        ]
     )
     # Standardize image
     image = transform(image).type(torch.FloatTensor)

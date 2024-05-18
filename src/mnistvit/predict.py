@@ -219,7 +219,7 @@ def main() -> None:
         help="enables test accuracy calculation",
     )
     parser.add_argument(
-        "--no-cuda", action="store_true", default=True, help="disables CUDA testing"
+        "--no-cuda", action="store_true", default=False, help="disables CUDA testing"
     )
     args = parser.parse_args()
     no_cuda = args.no_cuda or not torch.cuda.is_available()

@@ -15,8 +15,9 @@ class VisionTransformer(nn.Module):
         input_sizes (list of int): Spatial sizes of the input.
         output_size (int): Size of the output layer.
         patch_size (int): Size of a patch in one dimension.
-        latent_size (int): Size of the embedding.
         num_heads (int): Number of attention heads in each encoder block.
+        latent_size_multiplier (int): Yields the size of the embedding when multiplied
+            with `num_heads`.
         num_layers (int): Number of encoder blocks.
         encoder_size (int): Number of hidden units in each encoder MLP.
         head_size (int or list of int): Sizes of hidden layers in MLP head.
@@ -34,8 +35,8 @@ class VisionTransformer(nn.Module):
         input_sizes: List[int],
         output_size: int,
         patch_size: int,
-        latent_size: int,
         num_heads: int,
+        latent_size_multiplier: int,
         num_layers: int,
         encoder_size: int,
         head_size: int | List[int],
@@ -49,8 +50,8 @@ class VisionTransformer(nn.Module):
             "input_sizes": input_sizes,
             "output_size": output_size,
             "patch_size": patch_size,
-            "latent_size": latent_size,
             "num_heads": num_heads,
+            "latent_size_multiplier": latent_size_multiplier,
             "num_layers": num_layers,
             "encoder_size": encoder_size,
             "head_size": head_size,
@@ -58,6 +59,7 @@ class VisionTransformer(nn.Module):
             "encoder_activation": encoder_activation,
             "head_activation": head_activation,
         }
+        latent_size = latent_size_multiplier * num_heads
         self.embedding = Embedding(
             num_channels, input_sizes, patch_size, latent_size, dropout
         )
