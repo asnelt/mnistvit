@@ -1,7 +1,6 @@
 import argparse
 import os
 from tempfile import TemporaryDirectory
-from typing import Dict
 
 import torch
 from ray import train, tune
@@ -12,7 +11,7 @@ from .train import init_mnist_model, train_mnist
 from .utils import FILE_LIKE, save_model
 
 
-def objective(config: Dict, data_dir: str) -> None:
+def objective(config: dict[str, int | float], data_dir: str) -> None:
     """Objective function for hyperparameter tuning.
 
     Trains a model on MNIST according to the configuration and reports the mean loss.
@@ -80,7 +79,7 @@ def fit(
     num_samples: int,
     num_epochs: int,
     model_file: FILE_LIKE,
-    resources: Dict = None,
+    resources: dict[str, float] = None,
 ) -> None:
     """Tunes hyperparameters of a model to MNIST.
 

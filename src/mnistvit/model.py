@@ -1,6 +1,6 @@
 from math import prod
 from numbers import Number
-from typing import Dict, List, Literal
+from typing import Literal
 
 from torch import Tensor, cat, nn, randn
 
@@ -32,14 +32,14 @@ class VisionTransformer(nn.Module):
     def __init__(
         self,
         num_channels: int,
-        input_sizes: List[int],
+        input_sizes: list[int],
         output_size: int,
         patch_size: int,
         num_heads: int,
         latent_size_multiplier: int,
         num_layers: int,
         encoder_size: int,
-        head_size: int | List[int],
+        head_size: int | list[int],
         dropout: float = 0,
         encoder_activation: Literal["relu", "gelu"] = "gelu",
         head_activation: Literal["relu", "gelu", "tanh"] = "gelu",
@@ -111,7 +111,7 @@ class Embedding(nn.Module):
     def __init__(
         self,
         num_channels: int,
-        input_sizes: List[int],
+        input_sizes: list[int],
         patch_size: int,
         latent_size: int,
         dropout: float = 0,
@@ -160,8 +160,8 @@ class MLP(nn.Module):
         self,
         input_size: int,
         output_size: int,
-        hidden_sizes: List[int] = None,
-        dropout: float | List[float] = None,
+        hidden_sizes: list[int] = None,
+        dropout: float | list[float] = None,
         activation: Literal["relu", "gelu", "tanh"] = "relu",
     ) -> None:
         super().__init__()

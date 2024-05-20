@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
@@ -10,7 +8,7 @@ from .utils import FILE_LIKE
 
 def preprocess_mnist(
     data_dir: str, train: bool, use_augmentation: bool = False
-) -> Tuple:
+) -> torch.utils.data.dataset.Dataset:
     """Preprocesses the MNIST dataset.
 
     Normalizes the MNIST dataset with training mean and variance and eventually
@@ -23,7 +21,7 @@ def preprocess_mnist(
             affine transformations.  Default: `False`.
 
     Returns:
-        tuple: Image, target pairs.
+        torch.utils.data.dataset.Dataset: Image, target pairs.
     """
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
@@ -47,7 +45,7 @@ def get_train_loaders_mnist(
     batch_size: int,
     train_fraction: float = 1.0,
     use_augmentation: bool = True,
-) -> Tuple:
+) -> tuple[DataLoader, DataLoader]:
     """Training loaders of the MNIST dataset.
 
     Args:
@@ -78,9 +76,7 @@ def get_train_loaders_mnist(
     return train_loader, val_loader
 
 
-def get_test_loader_mnist(
-    data_dir: str, batch_size: int
-) -> torch.utils.data.DataLoader:
+def get_test_loader_mnist(data_dir: str, batch_size: int) -> DataLoader:
     """Test loader of the MNIST dataset.
 
     Args:

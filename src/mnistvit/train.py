@@ -1,5 +1,5 @@
 import argparse
-from typing import Callable, Dict
+from typing import Any, Callable
 
 import torch
 
@@ -10,13 +10,23 @@ from .utils import FILE_LIKE, save_model
 
 
 def train_mnist(
-    config: Dict,
+    config: dict[str, int | float | list[int]],
     data_dir: str,
     use_validation: bool = True,
     use_augmentation: bool = True,
     model_file: FILE_LIKE = None,
-    report_fn: Callable = None,
-    resume_states: Dict = None,
+    report_fn: Callable[
+        [
+            int,
+            float,
+            float,
+            torch.nn.Module,
+            torch.optim.Optimizer,
+            torch.optim.lr_scheduler.LRScheduler,
+        ],
+        None,
+    ] = None,
+    resume_states: dict[str, int | dict[str, Any]] = None,
     device: torch.device = "cpu",
 ) -> None:
     """Trains a single model on MNIST and eventually saves the model.
@@ -72,7 +82,9 @@ def train_mnist(
         save_model(model, model_file)
 
 
-def init_mnist_model(config: Dict, device: torch.device = "cpu") -> torch.nn.Module:
+def init_mnist_model(
+    config: dict[str, int | float | list[int]], device: torch.device = "cpu"
+) -> torch.nn.Module:
     """Initializes a vision transformer for training on MNIST.
 
     Args:
@@ -109,8 +121,18 @@ def train(
     weight_decay: float,
     epoch_lr_restart: int,
     val_loader: torch.utils.data.DataLoader = None,
-    report_fn: Callable = None,
-    resume_states: Dict = None,
+    report_fn: Callable[
+        [
+            int,
+            float,
+            float,
+            torch.nn.Module,
+            torch.optim.Optimizer,
+            torch.optim.lr_scheduler.LRScheduler,
+        ],
+        None,
+    ] = None,
+    resume_states: dict[str, int | dict[str, Any]] = None,
     device: torch.device = "cpu",
 ) -> None:
     """Main training function for model training.

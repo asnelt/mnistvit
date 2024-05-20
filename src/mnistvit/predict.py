@@ -1,5 +1,4 @@
 import argparse
-from typing import Dict
 
 import torch
 
@@ -8,7 +7,7 @@ from .utils import FILE_LIKE, load_model
 
 
 def test_mnist(
-    config: Dict,
+    config: dict[str, int],
     data_dir: str,
     model_file: FILE_LIKE,
     use_loss: bool = True,
