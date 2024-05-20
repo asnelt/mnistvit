@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mnistvit"
-version = "1.0.0"
+version = "1.0.1"
 authors = [{name = "Arno Onken", email = "asnelt@asnelt.org"}]
 description = "A vision transformer for training on MNIST"
 readme = "README.md"
