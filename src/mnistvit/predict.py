@@ -1,15 +1,16 @@
 import argparse
+import os
 
 import torch
 
 from .preprocess import get_test_loader_mnist, read_digit_image
-from .utils import FILE_LIKE, load_model
+from .utils import load_model
 
 
 def test_mnist(
     config: dict[str, int],
-    data_dir: str,
-    model_file: FILE_LIKE,
+    data_dir: str | os.PathLike,
+    model_dir: str | os.PathLike,
     use_loss: bool = True,
     use_accuracy: bool = True,
     device: torch.device = "cpu",
@@ -18,8 +19,8 @@ def test_mnist(
 
     Args:
         config (dict): Test configuration with `'batch_size'`.
-        data_dir (str): Directory of the MNIST dataset.
-        model_file (FILE_LIKE): File name to load the model from.
+        data_dir (str or os.PathLike): Directory of the MNIST dataset.
+        model_dir (str or os.PathLike): Directory to load the model from.
         use_loss (bool, optional): If true, evaluates the loss on the test set.
             Default: `True`.
         use_accuracy (bool, optional): If true, evaluates the accuracy on the test set.
@@ -27,7 +28,7 @@ def test_mnist(
         device (torch.device, optional): Device to evaluate the model on.
             Default: `'cpu'`.
     """
-    model = load_model(model_file, device)
+    model = load_model(model_dir, device)
     test_loader = get_test_loader_mnist(data_dir, config["batch_size"])
     if use_loss:
         loss_fn = torch.nn.CrossEntropyLoss()
@@ -39,20 +40,22 @@ def test_mnist(
 
 
 def predict_file(
-    image_file: FILE_LIKE, model_file: FILE_LIKE, device: torch.device = "cpu"
+    image_file: str | os.PathLike,
+    model_dir: str | os.PathLike,
+    device: torch.device = "cpu",
 ) -> int:
     """Loads a model and classifies a digit from an image file.
 
     Args:
-        image_file (FILE_LIKE): The image file.
-        model_file (FILE_LIKE): File name to load the model from.
+        image_file (str or os.PathLike): The image file.
+        model_dir (str or os.PathLike): Directory to load the model from.
         device (torch.device, optional): Device to evaluate the model on.
             Default: `'cpu'`.
 
     Returns:
         int: Predicted class label.
     """
-    model = load_model(model_file, device)
+    model = load_model(model_dir, device)
     image = read_digit_image(image_file)
     predicted = predict_single_image(model, image, device)
     return predicted
@@ -199,11 +202,11 @@ def main() -> None:
         help="input batch size for testing (default: 32)",
     )
     parser.add_argument(
-        "--model-file",
+        "--model-dir",
         type=str,
-        default="model.pt",
-        metavar="FILE",
-        help="file to load the model from (default: 'model.pt')",
+        default=".",
+        metavar="PATH",
+        help="directory to load the model from (default: '.')",
     )
     parser.add_argument(
         "--use-loss",
@@ -227,16 +230,17 @@ def main() -> None:
         "batch_size": args.batch_size,
     }
     if args.image_file is not None:
-        predicted = predict_file(args.image_file, args.model_file, device)
+        predicted = predict_file(args.image_file, args.model_dir, device)
         print(predicted)
-    test_mnist(
-        config,
-        data_dir="data",
-        model_file=args.model_file,
-        use_loss=args.use_loss,
-        use_accuracy=args.use_accuracy,
-        device=device,
-    )
+    if args.use_loss or args.use_accuracy:
+        test_mnist(
+            config,
+            data_dir=os.path.abspath("data"),
+            model_dir=os.path.abspath(args.model_dir),
+            use_loss=args.use_loss,
+            use_accuracy=args.use_accuracy,
+            device=device,
+        )
 
 
 if __name__ == "__main__":

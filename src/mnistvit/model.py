@@ -45,20 +45,6 @@ class VisionTransformer(nn.Module):
         head_activation: Literal["relu", "gelu", "tanh"] = "gelu",
     ) -> None:
         super().__init__()
-        self.kwargs = {
-            "num_channels": num_channels,
-            "input_sizes": input_sizes,
-            "output_size": output_size,
-            "patch_size": patch_size,
-            "num_heads": num_heads,
-            "latent_size_multiplier": latent_size_multiplier,
-            "num_layers": num_layers,
-            "encoder_size": encoder_size,
-            "head_size": head_size,
-            "dropout": dropout,
-            "encoder_activation": encoder_activation,
-            "head_activation": head_activation,
-        }
         latent_size = latent_size_multiplier * num_heads
         self.embedding = Embedding(
             num_channels, input_sizes, patch_size, latent_size, dropout

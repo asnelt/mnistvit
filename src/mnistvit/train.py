@@ -1,4 +1,5 @@
 import argparse
+import os
 from typing import Any, Callable
 
 import torch
@@ -6,15 +7,15 @@ import torch
 from .model import VisionTransformer
 from .predict import prediction_loss
 from .preprocess import get_train_loaders_mnist
-from .utils import FILE_LIKE, save_model
+from .utils import save_model
 
 
 def train_mnist(
-    config: dict[str, int | float | list[int]],
-    data_dir: str,
+    config: dict[str, str | int | float | list[int]],
+    data_dir: str | os.PathLike,
     use_validation: bool = True,
     use_augmentation: bool = True,
-    model_file: FILE_LIKE = None,
+    model_dir: str | os.PathLike = None,
     report_fn: Callable[
         [
             int,
@@ -35,14 +36,14 @@ def train_mnist(
         config (dict): Training configuration including `'batch_size'`, `'num_epochs'`,
             `'lr'`, `'weight_decay'`, `'epoch_lr_restart'`, `'patch_size'`,
             `'num_heads'`, `'latent_size_multiplier'`, `'num_layers'`, `'encoder_size'`,
-            `'head_size'` and `'dropout'`.
-        data_dir (str): Directory of the MNIST dataset.
+            `'head_size'`, `'dropout'`, `'encoder_activation'` and `'head_activation'`.
+        data_dir (str or os.PathLike): Directory of the MNIST dataset.
         use_validation (bool, optional): If true, sets aside a validation set from the
             training set, else uses all training samples for training.  Default: `True`.
         use_augmentation (bool, optional): If true, augments the training dataset with
             random affine transformations.  Default: `True`.
-        model_file (FILE_LIKE, optional): File name to save the model to.  If `None`
-            then the model is not saved.  Default: `None`.
+        model_dir (str or os.PathLike, optional): Directory to save the model to.  If
+            `None` then the model is not saved.  Default: `None`.
         report_fn (callable, optional): A function for reporting the training state.
             The function must accept arguments for epoch number (`int`),
             training loss (`float`), validation loss (`float`),
@@ -61,7 +62,9 @@ def train_mnist(
         train_fraction=train_fraction,
         use_augmentation=use_augmentation,
     )
-    model = init_mnist_model(config, device)
+    model_config = make_mnist_model_config(config)
+    model = VisionTransformer(**model_config)
+    model = model.to(device)
     if resume_states is not None:
         model.load_state_dict(resume_states["model"])
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -78,38 +81,40 @@ def train_mnist(
         resume_states,
         device,
     )
-    if model_file is not None:
-        save_model(model, model_file)
+    if model_dir is not None:
+        save_model(model_config, model.state_dict(), model_dir)
 
 
-def init_mnist_model(
-    config: dict[str, int | float | list[int]], device: torch.device = "cpu"
-) -> torch.nn.Module:
-    """Initializes a vision transformer for training on MNIST.
+def make_mnist_model_config(
+    train_config: dict[str, str | int | float | list[int]]
+) -> dict[str, str | int | float]:
+    """Configuration for initializing a vision transformer for training on MNIST.
+
+    Takes a training configuration and makes a configuration that can be used to
+    initialize a vision transformer for training on MNIST.
 
     Args:
         config (dict): Training configuration including `'patch_size'`, `'num_heads'`,
-            `'latent_size_multiplier'`, `'num_layers'`, `'encoder_size'`, `'head_size'`
-            and `'dropout'`.
-        device (torch.device, optional): Device to load the model on.
-            Default: `'cpu'`.
+            `'latent_size_multiplier'`, `'num_layers'`, `'encoder_size'`, `'head_size'`,
+            `'dropout'`, `'encoder_activation'` and `'head_activation'`.
     Returns:
-        torch.nn.Module: The initialized model.
+        model_config (dict): The vision transformer initialization configuration.
     """
-    model = VisionTransformer(
-        num_channels=1,
-        input_sizes=[28, 28],
-        output_size=10,
-        patch_size=config["patch_size"],
-        num_heads=config["num_heads"],
-        latent_size_multiplier=config["latent_size_multiplier"],
-        num_layers=config["num_layers"],
-        encoder_size=config["encoder_size"],
-        head_size=config["head_size"],
-        dropout=config["dropout"],
-    )
-    model = model.to(device)
-    return model
+    model_config = {
+        "num_channels": 1,
+        "input_sizes": [28, 28],
+        "output_size": 10,
+        "patch_size": train_config["patch_size"],
+        "num_heads": train_config["num_heads"],
+        "latent_size_multiplier": train_config["latent_size_multiplier"],
+        "num_layers": train_config["num_layers"],
+        "encoder_size": train_config["encoder_size"],
+        "head_size": train_config["head_size"],
+        "dropout": train_config["dropout"],
+        "encoder_activation": train_config["encoder_activation"],
+        "head_activation": train_config["head_activation"],
+    }
+    return model_config
 
 
 def train(
@@ -279,11 +284,25 @@ def main() -> None:
         help="dropout rate (default: 6e-2)",
     )
     parser.add_argument(
-        "--model-file",
+        "--encoder-activation",
         type=str,
-        default="model.pt",
-        metavar="FILE",
-        help="file to save the model to (default: 'model.pt')",
+        default="gelu",
+        metavar="ACT",
+        help="encoder activation function, either 'gelu' or 'relu' (default: 'gelu')",
+    )
+    parser.add_argument(
+        "--head-activation",
+        type=str,
+        default="gelu",
+        metavar="ACT",
+        help="MLP head activation function, 'gelu', 'relu' or 'tanh' (default: 'gelu')",
+    )
+    parser.add_argument(
+        "--model-dir",
+        type=str,
+        default=".",
+        metavar="PATH",
+        help="directory to save the model to (default: '.')",
     )
     parser.add_argument(
         "--use-validation",
@@ -320,6 +339,8 @@ def main() -> None:
         "encoder_size": args.encoder_size,
         "head_size": args.head_size,
         "dropout": args.dropout,
+        "encoder_activation": args.encoder_activation,
+        "head_activation": args.head_activation,
     }
 
     # Define function for reporting training progress
@@ -340,10 +361,10 @@ def main() -> None:
     use_augmentation = not args.no_augmentation
     train_mnist(
         config,
-        data_dir="data",
+        data_dir=os.path.abspath("data"),
         use_validation=args.use_validation,
         use_augmentation=use_augmentation,
-        model_file=args.model_file,
+        model_dir=os.path.abspath(args.model_dir),
         report_fn=report_fn,
         device=device,
     )

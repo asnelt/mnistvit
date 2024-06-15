@@ -30,10 +30,11 @@ To train a model with default parameters:
 python -m mnistvit.train
 ```
 
-The script will produce a file `model.pt` containing the trained model.  Use the `-h`
-argument for a list of options.
+The script will produce a file `config.json` with the model configuration and file
+`model.pt` containing the trained model.  Use the `-h` argument for a list of options.
 
-To evaluate the test set accuracy of the model stored in `model.pt`:
+To evaluate the test set accuracy of the model stored in `model.pt` with the
+configuration in `config.json`:
 ```
 python -m mnistvit.predict --use-accuracy
 ```

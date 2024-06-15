@@ -7,11 +7,13 @@ from ray import train, tune
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.optuna import OptunaSearch
 
-from .train import init_mnist_model, train_mnist
-from .utils import FILE_LIKE, save_model
+from .train import make_mnist_model_config, train_mnist
+from .utils import save_model
 
 
-def objective(config: dict[str, int | float], data_dir: str) -> None:
+def objective(
+    config: dict[str, str | int | float], data_dir: str | os.PathLike
+) -> None:
     """Objective function for hyperparameter tuning.
 
     Trains a model on MNIST according to the configuration and reports the mean loss.
@@ -22,8 +24,8 @@ def objective(config: dict[str, int | float], data_dir: str) -> None:
         config (dict): Training configuration including `'batch_size'`, `'num_epochs'`,
             `'lr'`, `'weight_decay'`, `'epoch_lr_restart'`, `'patch_size'`,
             `'num_heads'`, `'latent_size_multiplier'`, `'num_layers'`, `'encoder_size'`,
-            `'head_size'` and `'dropout'`.
-        data_dir (str): Directory of the MNIST training data.
+            `'head_size'`, `'dropout'`, `'encoder_activation'` and `'head_activation'`.
+        data_dir (str or os.PathLike): Directory of the MNIST training data.
     """
 
     # Define callback function for checkpoint saving
@@ -38,7 +40,11 @@ def objective(config: dict[str, int | float], data_dir: str) -> None:
         metrics = {"mean_loss": val_loss}
         with TemporaryDirectory() as temp_dir:
             torch.save(
-                (model.state_dict(), optimizer.state_dict(), lr_scheduler.state_dict()),
+                {
+                    "model": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "lr_scheduler": lr_scheduler.state_dict(),
+                },
                 os.path.join(temp_dir, "checkpoint.pt"),
             )
             metadata = {"epoch": epoch}
@@ -52,15 +58,8 @@ def objective(config: dict[str, int | float], data_dir: str) -> None:
     if train.get_checkpoint():
         checkpoint = train.get_checkpoint()
         with checkpoint.as_directory() as checkpoint_dir:
-            model_state, optimizer_state, lr_scheduler_state = torch.load(
-                os.path.join(checkpoint_dir, "checkpoint.pt")
-            )
-            resume_states = {
-                "epoch": checkpoint.get_metadata()["epoch"],
-                "model": model_state,
-                "optimizer": optimizer_state,
-                "lr_scheduler": lr_scheduler_state,
-            }
+            resume_states = torch.load(os.path.join(checkpoint_dir, "checkpoint.pt"))
+            resume_states["epoch"] = checkpoint.get_metadata()["epoch"]
     else:
         resume_states = None
 
@@ -75,24 +74,24 @@ def objective(config: dict[str, int | float], data_dir: str) -> None:
 
 def fit(
     exp_name: str,
-    storage_path: str,
+    storage_path: str | os.PathLike,
     num_samples: int,
     num_epochs: int,
-    model_file: FILE_LIKE,
+    model_dir: str | os.PathLike,
     resources: dict[str, float] = None,
 ) -> None:
     """Tunes hyperparameters of a model to MNIST.
 
     Selects the checkpoint with the best validation performance and prints the best
     result and the best checkpoint metadata.  The best model is then saved to the
-    provided model file name.
+    provided model directory.
 
     Args:
         exp_name (str): Name of the experiment.
-        storage_path (str): Path of the experiment directory.
+        storage_path (str or os.PathLike): Path of the experiment directory.
         num_samples (int): The number of hyperparameter configurations to try.
         num_epochs (int): The number of epochs per optimization.
-        model_file (FILE_LIKE): File name to save the best model to.
+        model_dir (str or os.PathLike): Directory to save the best model to.
         resources (dict, optional): Resource configuration per trial.  Default: `None`.
     """
     search_space = {
@@ -108,6 +107,8 @@ def fit(
         "encoder_size": tune.choice([2**i for i in range(4, 10)]),
         "head_size": tune.choice([2**i for i in range(4, 10)]),
         "dropout": tune.uniform(0, 0.5),
+        "encoder_activation": "gelu",
+        "head_activation": "gelu",
     }
     data_dir = os.path.abspath("data")
     trainable = tune.with_parameters(objective, data_dir=data_dir)
@@ -155,13 +156,12 @@ def fit(
     print("Best result config: ", best_result.config)
     print("Best checkpoint: ", best_checkpoint.get_metadata())
     with best_checkpoint.as_directory() as checkpoint_dir:
-        model_state = torch.load(
+        state_dict = torch.load(
             os.path.join(checkpoint_dir, "checkpoint.pt"),
             map_location=torch.device("cpu"),
-        )[0]
-    model = init_mnist_model(best_result.config)
-    model.load_state_dict(model_state)
-    save_model(model, model_file)
+        )["model"]
+    config = make_mnist_model_config(best_result.config)
+    save_model(config, state_dict, model_dir)
 
 
 def main() -> None:
@@ -178,7 +178,7 @@ def main() -> None:
         "--storage-path",
         type=str,
         default="ray_results",
-        metavar="DIR",
+        metavar="PATH",
         help="path of the experiment directory (default: 'ray_results')",
     )
     parser.add_argument(
@@ -186,7 +186,7 @@ def main() -> None:
         type=int,
         default=1024,
         metavar="N",
-        help="number of configs to test (default: 1024)",
+        help="number of configurations to test (default: 1024)",
     )
     parser.add_argument(
         "--num-epochs",
@@ -196,11 +196,11 @@ def main() -> None:
         help="number of epochs to train (default: 64)",
     )
     parser.add_argument(
-        "--model-file",
+        "--model-dir",
         type=str,
-        default="model.pt",
-        metavar="FILE",
-        help="file to save the best model to (default: 'model.pt')",
+        default=".",
+        metavar="PATH",
+        help="directory to save the best model to (default: '.')",
     )
     parser.add_argument(
         "--cpu-resource",
@@ -227,10 +227,10 @@ def main() -> None:
             resources["gpu"] = args.gpu_resource
     fit(
         exp_name=args.exp_name,
-        storage_path=args.storage_path,
+        storage_path=os.path.abspath(args.storage_path),
         num_samples=args.num_samples,
         num_epochs=args.num_epochs,
-        model_file=args.model_file,
+        model_dir=os.path.abspath(args.model_dir),
         resources=resources,
     )
 

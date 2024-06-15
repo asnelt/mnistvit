@@ -1,13 +1,13 @@
+from os import PathLike
+
 import torch
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 from torchvision.io import ImageReadMode, read_image
 
-from .utils import FILE_LIKE
-
 
 def preprocess_mnist(
-    data_dir: str, train: bool, use_augmentation: bool = False
+    data_dir: str | PathLike, train: bool, use_augmentation: bool = False
 ) -> torch.utils.data.dataset.Dataset:
     """Preprocesses the MNIST dataset.
 
@@ -15,7 +15,7 @@ def preprocess_mnist(
     augments the dataset with random affine transformations.
 
     Args:
-        data_dir (str): Directory of the MNIST dataset.
+        data_dir (str or os.PathLike): Directory of the MNIST dataset.
         train (bool): If true, loads the training set, else the test set.
         use_augmentation (bool, optional): If true, augments the dataset with random
             affine transformations.  Default: `False`.
@@ -41,7 +41,7 @@ def preprocess_mnist(
 
 
 def get_train_loaders_mnist(
-    data_dir: str,
+    data_dir: str | PathLike,
     batch_size: int,
     train_fraction: float = 1.0,
     use_augmentation: bool = True,
@@ -49,7 +49,7 @@ def get_train_loaders_mnist(
     """Training loaders of the MNIST dataset.
 
     Args:
-        data_dir (str): Directory of the MNIST dataset.
+        data_dir (str or os.PathLike): Directory of the MNIST dataset.
         batch_size (int): Size of the batches of the training loaders.
         train_fraction (float, optional): Fraction of the set used for the training
             loader.  The remainder is used for the validation loader.  Default: 1.0.
@@ -76,11 +76,11 @@ def get_train_loaders_mnist(
     return train_loader, val_loader
 
 
-def get_test_loader_mnist(data_dir: str, batch_size: int) -> DataLoader:
+def get_test_loader_mnist(data_dir: str | PathLike, batch_size: int) -> DataLoader:
     """Test loader of the MNIST dataset.
 
     Args:
-        data_dir (str): Directory of the MNIST dataset.
+        data_dir (str or os.PathLike): Directory of the MNIST dataset.
         batch_size (int): Size of the batches of the test loader.
 
     Returns:
@@ -91,14 +91,14 @@ def get_test_loader_mnist(data_dir: str, batch_size: int) -> DataLoader:
     return loader
 
 
-def read_digit_image(image_file: FILE_LIKE) -> torch.FloatTensor:
+def read_digit_image(image_file: str | PathLike) -> torch.FloatTensor:
     """Loads a single digit image from a file.
 
     Center crops and resizes the image to 28 by 28 pixels.  Also inverts the image if
     there are more bright than dark pixels.
 
     Args:
-        image_file (FILE_LIKE): The image file.
+        image_file (str or os.PathLike): The image file.
 
     Returns:
         torch.FloatTensor: The preprocessed digit image.
