@@ -3,7 +3,7 @@ import os
 from tempfile import TemporaryDirectory
 
 import torch
-from ray import train, tune
+from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.optuna import OptunaSearch
 
@@ -48,15 +48,15 @@ def objective(
                 os.path.join(temp_dir, "checkpoint.pt"),
             )
             metadata = {"epoch": epoch}
-            checkpoint = train.Checkpoint.from_directory(temp_dir)
+            checkpoint = tune.Checkpoint.from_directory(temp_dir)
             checkpoint.set_metadata(metadata)
-            train.report(metrics=metrics, checkpoint=checkpoint)
+            tune.report(metrics=metrics, checkpoint=checkpoint)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Resume checkpoint if available
-    if train.get_checkpoint():
-        checkpoint = train.get_checkpoint()
+    checkpoint = tune.get_checkpoint()
+    if checkpoint:
         with checkpoint.as_directory() as checkpoint_dir:
             resume_states = torch.load(os.path.join(checkpoint_dir, "checkpoint.pt"))
             resume_states["epoch"] = checkpoint.get_metadata()["epoch"]
@@ -129,10 +129,10 @@ def fit(
     else:
         tuner = tune.Tuner(
             trainable,
-            run_config=train.RunConfig(
+            run_config=tune.RunConfig(
                 name=exp_name,
                 storage_path=storage_path,
-                checkpoint_config=train.CheckpointConfig(
+                checkpoint_config=tune.CheckpointConfig(
                     checkpoint_score_attribute=metric,
                     checkpoint_score_order=mode,
                     num_to_keep=5,

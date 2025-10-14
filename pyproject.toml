@@ -1,14 +1,21 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = [
+    "setuptools>=77.0",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "mnistvit"
-version = "1.1.0"
-authors = [{name = "Arno Onken", email = "asnelt@asnelt.org"}]
+version = "1.2.0"
+authors = [
+    {name = "Arno Onken", email = "asnelt@asnelt.org"},
+]
 description = "A vision transformer for training on MNIST"
 readme = "README.md"
-license = {file="LICENSE"}
+license = "GPL-3.0-only"
+license-files = [
+    "LICENSE",
+]
 requires-python = ">=3.10"
 dependencies = [
     "torch",
@@ -17,12 +24,15 @@ dependencies = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-keywords = ["vision", "transformer", "mnist"]
+keywords = [
+    "vision",
+    "transformer",
+    "mnist",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/asnelt/mnistvit"
@@ -30,6 +40,6 @@ keywords = ["vision", "transformer", "mnist"]
 
 [project.optional-dependencies]
 tune = [
-  "ray[tune]",
+  "ray[tune]>=2.50",
   "optuna",
 ]

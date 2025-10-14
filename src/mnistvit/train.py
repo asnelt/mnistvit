@@ -86,7 +86,7 @@ def train_mnist(
 
 
 def make_mnist_model_config(
-    train_config: dict[str, str | int | float | list[int]]
+    train_config: dict[str, str | int | float | list[int]],
 ) -> dict[str, str | int | float]:
     """Configuration for initializing a vision transformer for training on MNIST.
 
