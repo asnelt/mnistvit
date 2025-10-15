@@ -2,8 +2,9 @@ from os import PathLike
 
 import torch
 from torch.utils.data import DataLoader, random_split
-from torchvision import datasets, transforms
-from torchvision.io import ImageReadMode, read_image
+from torchvision import datasets
+from torchvision.io import ImageReadMode, decode_image
+from torchvision.transforms import v2
 
 
 def preprocess_mnist(
@@ -23,16 +24,18 @@ def preprocess_mnist(
     Returns:
         torch.utils.data.dataset.Dataset: Image, target pairs.
     """
-    transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+    transform = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize((0.1307,), (0.3081,)),
+        ]
     )
     if use_augmentation:
         # Data augmentation
-        transform = transforms.Compose(
+        transform = v2.Compose(
             [
-                transforms.RandomAffine(
-                    degrees=16, translate=(0.1, 0.1), scale=(0.9, 1.1)
-                ),
+                v2.RandomAffine(degrees=16, translate=(0.1, 0.1), scale=(0.9, 1.1)),
                 transform,
             ]
         )
@@ -103,18 +106,21 @@ def read_digit_image(image_file: str | PathLike) -> torch.FloatTensor:
     Returns:
         torch.FloatTensor: The preprocessed digit image.
     """
-    image = read_image(image_file, mode=ImageReadMode.GRAY)
-    transform = transforms.Compose(
+    image = decode_image(
+        image_file, mode=ImageReadMode.GRAY, apply_exif_orientation=True
+    )
+    transform = v2.Compose(
         [
-            transforms.CenterCrop(min(image.size()[1:])),
-            transforms.Resize([28, 28]),
+            v2.CenterCrop(min(image.size()[1:])),
+            v2.Resize([28, 28]),
+            v2.ToDtype(torch.float32, scale=True),
         ]
     )
     # Standardize image
-    image = transform(image).type(torch.FloatTensor)
-    image = transforms.Normalize(image.mean(), image.std())(image)
+    image = transform(image)
+    image = v2.Normalize((image.mean(),), (image.std(),))(image)
     # Check if we need to invert the image
     if (image > 0).count_nonzero() > image.numel() / 2:
         # More bright than dark pixels
-        image = transforms.functional.invert(image)
+        image = v2.functional.invert(image)
     return image

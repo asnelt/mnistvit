@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mnistvit"
-version = "1.2.0"
+version = "1.3.0"
 authors = [
     {name = "Arno Onken", email = "asnelt@asnelt.org"},
 ]
@@ -18,8 +18,8 @@ license-files = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "torch",
-    "torchvision",
+    "torch>=2.6",
+    "torchvision>=0.21",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -41,5 +41,5 @@ keywords = [
 [project.optional-dependencies]
 tune = [
   "ray[tune]>=2.50",
-  "optuna",
+  "optuna>=4.5",
 ]
