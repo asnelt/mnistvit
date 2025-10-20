@@ -286,16 +286,16 @@ def main() -> None:
     parser.add_argument(
         "--encoder-activation",
         type=str,
+        choices=["gelu", "relu"],
         default="gelu",
-        metavar="ACT",
-        help="encoder activation function, either 'gelu' or 'relu' (default: 'gelu')",
+        help="encoder activation function (default: 'gelu')",
     )
     parser.add_argument(
         "--head-activation",
         type=str,
+        choices=["gelu", "relu", "tanh"],
         default="gelu",
-        metavar="ACT",
-        help="MLP head activation function, 'gelu', 'relu' or 'tanh' (default: 'gelu')",
+        help="MLP head activation function (default: 'gelu')",
     )
     parser.add_argument(
         "--model-dir",
