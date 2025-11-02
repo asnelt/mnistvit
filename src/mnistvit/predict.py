@@ -4,7 +4,7 @@ import os
 import torch
 
 from .preprocess import get_test_loader_mnist, read_digit_image
-from .utils import load_model
+from .utils import get_device, load_model
 
 
 def test_mnist(
@@ -13,9 +13,9 @@ def test_mnist(
     model_dir: str | os.PathLike,
     use_loss: bool = True,
     use_accuracy: bool = True,
-    device: torch.device = "cpu",
+    device: str | torch.device = "cpu",
 ) -> None:
-    """Loads a model, tests it on MNIST and prints the results.
+    """Load a model, test it on MNIST and print the results.
 
     Args:
         config (dict): Test configuration with `'batch_size'`.
@@ -25,7 +25,7 @@ def test_mnist(
             Default: `True`.
         use_accuracy (bool, optional): If true, evaluates the accuracy on the test set.
             Default: `True`.
-        device (torch.device, optional): Device to evaluate the model on.
+        device (str or torch.device, optional): Device to evaluate the model on.
             Default: `'cpu'`.
     """
     model = load_model(model_dir, device)
@@ -42,14 +42,14 @@ def test_mnist(
 def predict_file(
     image_file: str | os.PathLike,
     model_dir: str | os.PathLike,
-    device: torch.device = "cpu",
+    device: str | torch.device = "cpu",
 ) -> int:
-    """Loads a model and classifies a digit from an image file.
+    """Load a model and classify a digit from an image file.
 
     Args:
         image_file (str or os.PathLike): The image file.
         model_dir (str or os.PathLike): Directory to load the model from.
-        device (torch.device, optional): Device to evaluate the model on.
+        device (str or torch.device, optional): Device to evaluate the model on.
             Default: `'cpu'`.
 
     Returns:
@@ -65,22 +65,22 @@ def prediction_loss(
     model: torch.nn.Module,
     data_loader: torch.utils.data.DataLoader,
     loss_fn: torch.nn.Module,
-    device: torch.device = "cpu",
+    device: str | torch.device = "cpu",
 ) -> float:
-    """Evaluates the model loss on the data loader.
+    """Evaluate the model loss on the data loader.
 
     Args:
         model (torch.nn.Module): Model to evaluate.
         data_loader (torch.utils.data.DataLoader): Data loader for evaluation.
         loss_fn (torch.nn.Module): Loss function for evaluation.
-        device (torch.device, optional): Device to evaluate the model on.
+        device (str or torch.device, optional): Device to evaluate the model on.
             Default: `'cpu'`.
 
     Returns:
         float: Calculated loss.
     """
     model.eval()
-    loss = 0
+    loss = 0.0
     with torch.no_grad():
         for data, target in data_loader:
             data, target = data.to(device), target.to(device)
@@ -93,14 +93,14 @@ def prediction_loss(
 def prediction_accuracy(
     model: torch.nn.Module,
     data_loader: torch.utils.data.DataLoader,
-    device: torch.device = "cpu",
+    device: str | torch.device = "cpu",
 ) -> float:
-    """Evaluates the model accuracy on the data loader.
+    """Evaluate the model accuracy on the data loader.
 
     Args:
         model (torch.nn.Module): Model to evaluate.
         data_loader (torch.utils.data.DataLoader): Data loader for evaluation.
-        device (torch.device, optional): Device to evaluate the model on.
+        device (str or torch.device, optional): Device to evaluate the model on.
             Default: `'cpu'`.
 
     Returns:
@@ -117,14 +117,16 @@ def prediction_accuracy(
 
 
 def predict_single_image(
-    model: torch.nn.Module, image: torch.FloatTensor, device: torch.device = "cpu"
+    model: torch.nn.Module,
+    image: torch.FloatTensor,
+    device: str | torch.device = "cpu",
 ) -> int:
-    """Uses model to classify a digit image.
+    """Use model to classify a digit image.
 
     Args:
         model (torch.nn.Module): Model to use for classification.
         image (torch.FloatTensor): Preprocessed digit image.
-        device (torch.device, optional): Device to evaluate the model on.
+        device (str or torch.device, optional): Device to evaluate the model on.
             Default: `'cpu'`.
 
     Returns:
@@ -132,16 +134,19 @@ def predict_single_image(
     """
     data = image.unsqueeze(0)  # Add batch dimension
     data = data.to(device)
-    predicted = classify(model, data).cpu().item()
+    predicted = int(classify(model, data).cpu().item())
     return predicted
 
 
-def classify(model: torch.nn.Module, data: torch.utils.data.Sampler) -> torch.Tensor:
-    """Uses model to classify given data.
+def classify(
+    model: torch.nn.Module,
+    data: torch.utils.data.Dataset | torch.Tensor,
+) -> torch.Tensor:
+    """Use model to classify given data.
 
     Args:
         model (torch.nn.Module): Model to use for classification.
-        data (torch.utils.data.Sampler): Data sampler.
+        data (torch.utils.data.Dataset or torch.Tensor): Data to process.
 
     Returns:
         torch.Tensor: Predicted class labels.
@@ -152,13 +157,14 @@ def classify(model: torch.nn.Module, data: torch.utils.data.Sampler) -> torch.Te
 
 
 def class_log_probs(
-    model: torch.nn.Module, data: torch.utils.data.Sampler
+    model: torch.nn.Module,
+    data: torch.utils.data.Dataset | torch.Tensor,
 ) -> torch.Tensor:
-    """Evaluates model log probabilities of all classes on given data.
+    """Evaluate model log probabilities of all classes on given data.
 
     Args:
         model (torch.nn.Module): Model to use for evaluation.
-        data (torch.utils.data.Sampler): Data sampler.
+        data (torch.utils.data.Dataset or torch.Tensor): Data to process.
 
     Returns:
         torch.Tensor: Log probabilities of classes.
@@ -168,12 +174,15 @@ def class_log_probs(
     return log_probs
 
 
-def eval_output(model: torch.nn.Module, data: torch.utils.data.Sampler) -> torch.Tensor:
-    """Evaluates the output of a model on given data.
+def eval_output(
+    model: torch.nn.Module,
+    data: torch.utils.data.Dataset | torch.Tensor,
+) -> torch.Tensor:
+    """Evaluate the output of a model on given data.
 
     Args:
         model (torch.nn.Module): Model to use for evaluation.
-        data (torch.utils.data.Sampler): Data sampler.
+        data (torch.utils.data.Dataset or torch.Tensor): Data to process.
 
     Returns:
         torch.Tensor: Model output.
@@ -185,7 +194,7 @@ def eval_output(model: torch.nn.Module, data: torch.utils.data.Sampler) -> torch
 
 
 def main() -> None:
-    """Processes command line arguments with prediction."""
+    """Process command line arguments with prediction."""
     parser = argparse.ArgumentParser(description="MNIST Prediction")
     parser.add_argument(
         "--image-file",
@@ -221,11 +230,15 @@ def main() -> None:
         help="enables test accuracy calculation",
     )
     parser.add_argument(
-        "--no-cuda", action="store_true", default=False, help="disables CUDA testing"
+        "--device",
+        type=str,
+        default=None,
+        metavar="DEVICE",
+        help="device for testing \
+              (default: None, meaning 'cuda' if available, else 'cpu')",
     )
     args = parser.parse_args()
-    no_cuda = args.no_cuda or not torch.cuda.is_available()
-    device = torch.device("cpu" if no_cuda else "cuda")
+    device = get_device(args.device)
     config = {
         "batch_size": args.batch_size,
     }

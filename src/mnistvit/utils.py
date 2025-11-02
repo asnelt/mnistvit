@@ -8,12 +8,27 @@ import torch
 from .model import VisionTransformer
 
 
+def get_device(device: str | torch.device | None = None) -> torch.device:
+    """Turn the device argument into a torch device.
+
+    Args:
+        device (str or torch.device or None, optional): The desired device.  If `None`
+            then `'cuda'` will be used if available, else `'cpu'`.  Default: `None`.
+
+    Returns:
+        torch.device: The selected device.
+    """
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    return torch.device(device)
+
+
 def save_model(
-    config: dict[str, str | int | float],
+    config: dict[str, str | int | float | list[int]],
     state_dict: dict[str, Any],
     model_dir: str | os.PathLike,
 ) -> None:
-    """Saves the vision transformer configuration and model state to a directory.
+    """Save the vision transformer configuration and model state to a directory.
 
     Args:
         config (dict): Model configuration with all keyword arguments to initialize the
@@ -28,13 +43,13 @@ def save_model(
 
 
 def load_model(
-    model_dir: str | os.PathLike, device: torch.device = "cpu"
+    model_dir: str | os.PathLike, device: str | torch.device = "cpu"
 ) -> VisionTransformer:
-    """Loads the model from a directory.
+    """Load the model from a directory.
 
     Args:
         model_dir (str or os.PathLike): Directory to load the model from.
-        device (torch.device, optional): Device to load the model onto.
+        device (str or torch.device, optional): Device to load the model onto.
             Default: `'cpu'`.
 
     Returns:

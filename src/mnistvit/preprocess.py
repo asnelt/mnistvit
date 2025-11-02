@@ -9,8 +9,8 @@ from torchvision.transforms import v2
 
 def preprocess_mnist(
     data_dir: str | PathLike, train: bool, use_augmentation: bool = False
-) -> torch.utils.data.dataset.Dataset:
-    """Preprocesses the MNIST dataset.
+) -> datasets.VisionDataset:
+    """Preprocess the MNIST dataset.
 
     Normalizes the MNIST dataset with training mean and variance and eventually
     augments the dataset with random affine transformations.
@@ -22,7 +22,7 @@ def preprocess_mnist(
             affine transformations.  Default: `False`.
 
     Returns:
-        torch.utils.data.dataset.Dataset: Image, target pairs.
+        torchvision.datasets.VisionDataset: Image, target pairs.
     """
     transform = v2.Compose(
         [
@@ -48,8 +48,8 @@ def get_train_loaders_mnist(
     batch_size: int,
     train_fraction: float = 1.0,
     use_augmentation: bool = True,
-) -> tuple[DataLoader, DataLoader]:
-    """Training loaders of the MNIST dataset.
+) -> tuple[DataLoader, DataLoader | None]:
+    """Get training loaders of the MNIST dataset.
 
     Args:
         data_dir (str or os.PathLike): Directory of the MNIST dataset.
@@ -64,23 +64,23 @@ def get_train_loaders_mnist(
             `train_fraction` is 1.
     """
     assert 0 <= train_fraction <= 1
-    loader_kwargs = {"shuffle": True, "batch_size": batch_size}
     dataset = preprocess_mnist(data_dir, train=True, use_augmentation=use_augmentation)
+    shuffle = True
     if train_fraction == 1.0:
-        train_loader = DataLoader(dataset, **loader_kwargs)
+        train_loader = DataLoader(dataset, shuffle=shuffle, batch_size=batch_size)
         val_loader = None
     else:
         num_train = int(len(dataset) * train_fraction)
         train_set, val_set = random_split(
             dataset, [num_train, len(dataset) - num_train]
         )
-        train_loader = DataLoader(train_set, **loader_kwargs)
-        val_loader = DataLoader(val_set, **loader_kwargs)
+        train_loader = DataLoader(train_set, shuffle=shuffle, batch_size=batch_size)
+        val_loader = DataLoader(val_set, shuffle=shuffle, batch_size=batch_size)
     return train_loader, val_loader
 
 
 def get_test_loader_mnist(data_dir: str | PathLike, batch_size: int) -> DataLoader:
-    """Test loader of the MNIST dataset.
+    """Get test loader of the MNIST dataset.
 
     Args:
         data_dir (str or os.PathLike): Directory of the MNIST dataset.
@@ -95,7 +95,7 @@ def get_test_loader_mnist(data_dir: str | PathLike, batch_size: int) -> DataLoad
 
 
 def read_digit_image(image_file: str | PathLike) -> torch.FloatTensor:
-    """Loads a single digit image from a file.
+    """Load a single digit image from a file.
 
     Center crops and resizes the image to 28 by 28 pixels.  Also inverts the image if
     there are more bright than dark pixels.

@@ -5,6 +5,10 @@ achieving 99.65% test accuracy with default parameters and without pre-training.
 The ViT architecture and learning parameters can be configured easily.  Code for
 hyperparameter optimization is provided as well.
 
+The code is intended to be used for learning about vision transformers.  With MNIST as
+a simple and well understood dataset, the importance of various hyperparameters can be
+explored.
+
 
 ## Requirements
 
@@ -17,9 +21,13 @@ The package requires Python 3.10 or greater and additionally requires the `torch
 
 To install the mnistvit package, run the following command in the parent directory of
 the repository:
-
 ```
 pip install mnistvit
+```
+
+To install the package with hyperparameter optimization support:
+```
+pip install mnistvit[tune]
 ```
 
 

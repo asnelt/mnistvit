@@ -1,20 +1,19 @@
 import argparse
 import os
 from tempfile import TemporaryDirectory
+from typing import Any, cast
 
 import torch
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.optuna import OptunaSearch
 
-from .train import make_mnist_model_config, train_mnist
-from .utils import save_model
+from .train import TrainConfigDict, make_mnist_model_config, train_mnist
+from .utils import get_device, save_model
 
 
-def objective(
-    config: dict[str, str | int | float], data_dir: str | os.PathLike
-) -> None:
-    """Objective function for hyperparameter tuning.
+def objective(config: dict[str, Any], data_dir: str | os.PathLike) -> None:
+    """Train a model for a given configuration.
 
     Trains a model on MNIST according to the configuration and reports the mean loss.
     Also saves checkpoints to `'checkpoint.pt'` files.  Checkpoints contain model,
@@ -32,7 +31,7 @@ def objective(
     def report_fn(
         epoch: int,
         train_loss: float,
-        val_loss: float,
+        val_loss: float | None,
         model: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         lr_scheduler: torch.optim.lr_scheduler.LRScheduler,
@@ -52,7 +51,7 @@ def objective(
             checkpoint.set_metadata(metadata)
             tune.report(metrics=metrics, checkpoint=checkpoint)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
 
     # Resume checkpoint if available
     checkpoint = tune.get_checkpoint()
@@ -63,8 +62,9 @@ def objective(
     else:
         resume_states = None
 
+    train_config = cast(TrainConfigDict, config)
     train_mnist(
-        config=config,
+        config=train_config,
         data_dir=data_dir,
         report_fn=report_fn,
         resume_states=resume_states,
@@ -78,9 +78,9 @@ def fit(
     num_samples: int,
     num_epochs: int,
     model_dir: str | os.PathLike,
-    resources: dict[str, float] = None,
+    resources: dict[str, float] | None = None,
 ) -> None:
-    """Tunes hyperparameters of a model to MNIST.
+    """Tune hyperparameters of a model to MNIST.
 
     Selects the checkpoint with the best validation performance and prints the best
     result and the best checkpoint metadata.  The best model is then saved to the
@@ -92,7 +92,8 @@ def fit(
         num_samples (int): The number of hyperparameter configurations to try.
         num_epochs (int): The number of epochs per optimization.
         model_dir (str or os.PathLike): Directory to save the best model to.
-        resources (dict, optional): Resource configuration per trial.  Default: `None`.
+        resources (dict or None, optional): Resource configuration per trial.
+            Default: `None`.
     """
     search_space = {
         "batch_size": tune.choice([32, 64, 128, 256]),
@@ -160,12 +161,15 @@ def fit(
             os.path.join(checkpoint_dir, "checkpoint.pt"),
             map_location=torch.device("cpu"),
         )["model"]
-    config = make_mnist_model_config(best_result.config)
-    save_model(config, state_dict, model_dir)
+    best_config = best_result.config
+    if best_config is not None:
+        train_config = cast(TrainConfigDict, best_config)
+        config = make_mnist_model_config(train_config)
+        save_model(config, state_dict, model_dir)
 
 
 def main() -> None:
-    """Processes command line arguments with tuning."""
+    """Process command line arguments with tuning."""
     parser = argparse.ArgumentParser(description="MNIST Vision Transformer Tuning")
     parser.add_argument(
         "--exp-name",

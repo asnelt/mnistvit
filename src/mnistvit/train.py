@@ -1,58 +1,85 @@
 import argparse
 import os
-from typing import Any, Callable
+from typing import Any, Callable, Mapping, TypedDict
 
 import torch
 
-from .model import VisionTransformer
+from .model import EncoderActivation, MLPActivation, VisionTransformer
 from .predict import prediction_loss
 from .preprocess import get_train_loaders_mnist
-from .utils import save_model
+from .utils import get_device, save_model
+
+
+class TrainConfigDict(TypedDict):
+    """Represents a configuration with all training parameters."""
+
+    batch_size: int
+    num_epochs: int
+    lr: float
+    weight_decay: float
+    epoch_lr_restart: int
+    patch_size: int
+    num_heads: int
+    latent_size_multiplier: int
+    num_layers: int
+    encoder_size: int
+    head_size: int
+    dropout: float
+    encoder_activation: EncoderActivation
+    head_activation: MLPActivation
+
+
+class ResumeStatesDict(TypedDict):
+    """Represents a complete state to resume training."""
+
+    epoch: int
+    model: Mapping[str, Any]
+    optimizer: dict[str, Any]
+    lr_scheduler: dict[str, Any]
 
 
 def train_mnist(
-    config: dict[str, str | int | float | list[int]],
+    config: TrainConfigDict,
     data_dir: str | os.PathLike,
     use_validation: bool = True,
     use_augmentation: bool = True,
-    model_dir: str | os.PathLike = None,
-    report_fn: Callable[
-        [
-            int,
-            float,
-            float,
-            torch.nn.Module,
-            torch.optim.Optimizer,
-            torch.optim.lr_scheduler.LRScheduler,
-        ],
-        None,
-    ] = None,
-    resume_states: dict[str, int | dict[str, Any]] = None,
-    device: torch.device = "cpu",
+    model_dir: str | os.PathLike | None = None,
+    report_fn: (
+        Callable[
+            [
+                int,
+                float,
+                float | None,
+                torch.nn.Module,
+                torch.optim.Optimizer,
+                torch.optim.lr_scheduler.LRScheduler,
+            ],
+            None,
+        ]
+        | None
+    ) = None,
+    resume_states: ResumeStatesDict | None = None,
+    device: str | torch.device = "cpu",
 ) -> None:
-    """Trains a single model on MNIST and eventually saves the model.
+    """Train a single model on MNIST and eventually save the model.
 
     Args:
-        config (dict): Training configuration including `'batch_size'`, `'num_epochs'`,
-            `'lr'`, `'weight_decay'`, `'epoch_lr_restart'`, `'patch_size'`,
-            `'num_heads'`, `'latent_size_multiplier'`, `'num_layers'`, `'encoder_size'`,
-            `'head_size'`, `'dropout'`, `'encoder_activation'` and `'head_activation'`.
+        config (TrainConfigDict): Training configuration.
         data_dir (str or os.PathLike): Directory of the MNIST dataset.
         use_validation (bool, optional): If true, sets aside a validation set from the
             training set, else uses all training samples for training.  Default: `True`.
         use_augmentation (bool, optional): If true, augments the training dataset with
             random affine transformations.  Default: `True`.
-        model_dir (str or os.PathLike, optional): Directory to save the model to.  If
-            `None` then the model is not saved.  Default: `None`.
-        report_fn (callable, optional): A function for reporting the training state.
-            The function must accept arguments for epoch number (`int`),
-            training loss (`float`), validation loss (`float`),
-            model (`torch.nn.Module`),
-            optimizer (`torch.optim.Optimizer`) and
+        model_dir (str or os.PathLike or None, optional): Directory to save the model
+            to.  If `None` then the model is not saved.  Default: `None`.
+        report_fn (Callable or None, optional): A function for reporting the training
+            state.  The function must accept arguments for epoch number (`int`),
+            training loss (`float`), validation loss (`float` or `None`),
+            model (`torch.nn.Module`), optimizer (`torch.optim.Optimizer`) and
             lr_scheduler (`torch.optim.lr_scheduler.LRScheduler`).  Default: `None`.
-        resume_states (dict, optional): Dictionary with states for `'epoch'`, `'model'`,
-            `'optimizer'` and `'lr_scheduler'`.  Default: `None`.
-        device (torch.device, optional): Device to train the model on.
+        resume_states (ResumeStatesDict or None, optional): Dictionary with states to
+            resume.  Default: `None`.
+        device (str or torch.device, optional): Device to train the model on.
             Default: `'cpu'`.
     """
     train_fraction = 0.8 if use_validation else 1.0
@@ -69,34 +96,31 @@ def train_mnist(
         model.load_state_dict(resume_states["model"])
     loss_fn = torch.nn.CrossEntropyLoss()
     train(
-        model,
-        train_loader,
-        loss_fn,
-        config["num_epochs"],
-        config["lr"],
-        config["weight_decay"],
-        config["epoch_lr_restart"],
-        val_loader,
-        report_fn,
-        resume_states,
-        device,
+        model=model,
+        train_loader=train_loader,
+        loss_fn=loss_fn,
+        num_epochs=config["num_epochs"],
+        lr=config["lr"],
+        weight_decay=config["weight_decay"],
+        epoch_lr_restart=config["epoch_lr_restart"],
+        val_loader=val_loader,
+        report_fn=report_fn,
+        resume_states=resume_states,
+        device=device,
     )
     if model_dir is not None:
         save_model(model_config, model.state_dict(), model_dir)
 
 
-def make_mnist_model_config(
-    train_config: dict[str, str | int | float | list[int]],
-) -> dict[str, str | int | float]:
-    """Configuration for initializing a vision transformer for training on MNIST.
+def make_mnist_model_config(train_config: TrainConfigDict) -> dict[str, Any]:
+    """Make configuration for initializing a vision transformer for training on MNIST.
 
     Takes a training configuration and makes a configuration that can be used to
     initialize a vision transformer for training on MNIST.
 
     Args:
-        config (dict): Training configuration including `'patch_size'`, `'num_heads'`,
-            `'latent_size_multiplier'`, `'num_layers'`, `'encoder_size'`, `'head_size'`,
-            `'dropout'`, `'encoder_activation'` and `'head_activation'`.
+        config (TrainConfigDict): Training configuration with model hyperparameters.
+
     Returns:
         model_config (dict): The vision transformer initialization configuration.
     """
@@ -125,22 +149,25 @@ def train(
     lr: float,
     weight_decay: float,
     epoch_lr_restart: int,
-    val_loader: torch.utils.data.DataLoader = None,
-    report_fn: Callable[
-        [
-            int,
-            float,
-            float,
-            torch.nn.Module,
-            torch.optim.Optimizer,
-            torch.optim.lr_scheduler.LRScheduler,
-        ],
-        None,
-    ] = None,
-    resume_states: dict[str, int | dict[str, Any]] = None,
-    device: torch.device = "cpu",
+    val_loader: torch.utils.data.DataLoader | None = None,
+    report_fn: (
+        Callable[
+            [
+                int,
+                float,
+                float | None,
+                torch.nn.Module,
+                torch.optim.Optimizer,
+                torch.optim.lr_scheduler.LRScheduler,
+            ],
+            None,
+        ]
+        | None
+    ) = None,
+    resume_states: ResumeStatesDict | None = None,
+    device: str | torch.device = "cpu",
 ) -> None:
-    """Main training function for model training.
+    """Train model.
 
     Initializes an optimizer and learning rate scheduler, contains the loop over epochs
     and eventually evaluates validation performance.
@@ -153,17 +180,16 @@ def train(
         lr (float): Learning rate.
         weight_decay (float): Weight decay coefficient.
         epoch_lr_restart (int): Epoch for first learning rate scheduler restart.
-        val_loader (torch.utils.data.DataLoader, optional): Validation data loader.
-            Default: `None`.
-        report_fn (callable, optional): A function for reporting the training state.
-            The function must accept arguments for epoch number (`int`),
-            training loss (`float`), validation loss (`float`),
-            model (`torch.nn.Module`),
-            optimizer (`torch.optim.Optimizer`) and
+        val_loader (torch.utils.data.DataLoader or None, optional): Validation data
+            loader.  Default: `None`.
+        report_fn (Callable or None, optional): A function for reporting the training
+            state.  The function must accept arguments for epoch number (`int`),
+            training loss (`float`), validation loss (`float` or `None`),
+            model (`torch.nn.Module`), optimizer (`torch.optim.Optimizer`) and
             lr_scheduler (`torch.optim.lr_scheduler.LRScheduler`).  Default: `None`.
-        resume_states (dict, optional): Dictionary with states for `'epoch'`,
-            `'optimizer'` and `'lr_scheduler'`.  Default: `None`.
-        device (torch.device, optional): Device to train the model on.
+        resume_states (dict or None, optional): Dictionary with states to resume.
+            Default: `None`.
+        device (str or torch.device, optional): Device to train the model on.
             Default: `'cpu'`.
     """
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -197,7 +223,7 @@ def train(
 
 
 def main() -> None:
-    """Processes command line arguments with training."""
+    """Process command line arguments with training."""
     parser = argparse.ArgumentParser(description="MNIST Vision Transformer Training")
     parser.add_argument(
         "--batch-size",
@@ -286,14 +312,14 @@ def main() -> None:
     parser.add_argument(
         "--encoder-activation",
         type=str,
-        choices=["gelu", "relu"],
+        choices=["relu", "gelu"],
         default="gelu",
         help="encoder activation function (default: 'gelu')",
     )
     parser.add_argument(
         "--head-activation",
         type=str,
-        choices=["gelu", "relu", "tanh"],
+        choices=["relu", "gelu", "tanh"],
         default="gelu",
         help="MLP head activation function (default: 'gelu')",
     )
@@ -320,13 +346,17 @@ def main() -> None:
         "--seed", type=int, default=1, metavar="S", help="random seed (default: 1)"
     )
     parser.add_argument(
-        "--no-cuda", action="store_true", default=False, help="disables CUDA training"
+        "--device",
+        type=str,
+        default=None,
+        metavar="DEVICE",
+        help="device for training \
+              (default: None, meaning 'cuda' if available, else 'cpu')",
     )
     args = parser.parse_args()
-    no_cuda = args.no_cuda or not torch.cuda.is_available()
-    device = torch.device("cpu" if no_cuda else "cuda")
+    device = get_device(args.device)
     torch.manual_seed(args.seed)
-    config = {
+    config: TrainConfigDict = {
         "batch_size": args.batch_size,
         "num_epochs": args.num_epochs,
         "lr": args.lr,
@@ -347,13 +377,13 @@ def main() -> None:
     def report_fn(
         epoch: int,
         train_loss: float,
-        val_loss: float,
+        val_loss: float | None,
         model: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         lr_scheduler: torch.optim.lr_scheduler.LRScheduler,
     ) -> None:
         print(
-            f"epoch: {epoch+1}\t"
+            f"epoch: {epoch + 1}\t"
             f"training loss: {train_loss}\t"
             f"validation loss: {val_loss}"
         )

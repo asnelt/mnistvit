@@ -4,6 +4,9 @@ from typing import Literal
 
 from torch import Tensor, cat, nn, randn
 
+type EncoderActivation = Literal["relu", "gelu"]
+type MLPActivation = Literal["relu", "gelu", "tanh"]
+
 
 class VisionTransformer(nn.Module):
     """Configurable vision transformer (ViT).
@@ -23,10 +26,10 @@ class VisionTransformer(nn.Module):
         head_size (int or list of int): Sizes of hidden layers in MLP head.
         dropout (float, optional): Dropout probabilities of embedding, encoder and MLP
             head.  Default: 0.
-        encoder_activation (str, optional): Encoder activation function string, either
-            `'relu'` or `'gelu'`.  Default: `'gelu'`.
-        head_activation (str, optional): MLP head activation function string, `'relu'`,
-            `'gelu'` or `'tanh'`.  Default: `'gelu'`.
+        encoder_activation (EncoderActivation, optional): Encoder activation function
+            string, either `'relu'` or `'gelu'`.  Default: `'gelu'`.
+        head_activation (MLPActivation, optional): MLP head activation function string,
+            `'relu'`, `'gelu'` or `'tanh'`.  Default: `'gelu'`.
     """
 
     def __init__(
@@ -41,8 +44,8 @@ class VisionTransformer(nn.Module):
         encoder_size: int,
         head_size: int | list[int],
         dropout: float = 0,
-        encoder_activation: Literal["relu", "gelu"] = "gelu",
-        head_activation: Literal["relu", "gelu", "tanh"] = "gelu",
+        encoder_activation: EncoderActivation = "gelu",
+        head_activation: MLPActivation = "gelu",
     ) -> None:
         super().__init__()
         latent_size = latent_size_multiplier * num_heads
@@ -62,12 +65,14 @@ class VisionTransformer(nn.Module):
         self.encoder = nn.TransformerEncoder(
             encoder_layer, num_layers, layer_norm, enable_nested_tensor=False
         )
-        if isinstance(head_size, Number):
-            head_size = [head_size]
+        if isinstance(head_size, int):
+            hidden_sizes = [head_size]
+        else:
+            hidden_sizes = head_size
         self.mlp_head = MLP(
             input_size=latent_size,
             output_size=output_size,
-            hidden_sizes=head_size,
+            hidden_sizes=hidden_sizes,
             dropout=dropout,
             activation=head_activation,
         )
@@ -133,22 +138,23 @@ class MLP(nn.Module):
     Args:
         input_size (int): Size of the input layer.
         output_size (int): Size of the output layer.
-        hidden_sizes (list of int, optional): Sizes of hidden layers.  Default: `None`.
-        dropout (float or list of float, optional): Dropout probabilities of each
-            hidden layer.  If `None`, no dropout will be used.  If single float, the
-            same dropout probability will be used for all hidden layers.
+        hidden_sizes (list of int or None, optional): Sizes of hidden layers.
             Default: `None`.
-        activation (str, optional): Activation function string, `'relu'`, `'gelu'` or
-            `'tanh'`.  Default: `'relu'`.
+        dropout (float or list of float or None, optional): Dropout probabilities of
+            each hidden layer.  If `None`, no dropout will be used.  If single float,
+            the same dropout probability will be used for all hidden layers.
+            Default: `None`.
+        activation (MLPActivation, optional): Activation function string, `'relu'`,
+            `'gelu'` or `'tanh'`.  Default: `'relu'`.
     """
 
     def __init__(
         self,
         input_size: int,
         output_size: int,
-        hidden_sizes: list[int] = None,
-        dropout: float | list[float] = None,
-        activation: Literal["relu", "gelu", "tanh"] = "relu",
+        hidden_sizes: list[int] | None = None,
+        dropout: float | list[float] | None = None,
+        activation: MLPActivation = "relu",
     ) -> None:
         super().__init__()
         self.flatten = nn.Flatten()
@@ -163,8 +169,9 @@ class MLP(nn.Module):
         elif isinstance(dropout, Number):
             dropout_modules = [nn.Dropout(dropout) for _ in range(len(hidden_sizes))]
         else:
+            assert isinstance(dropout, list)
             dropout_modules = [nn.Dropout(rate) for rate in dropout]
-        modules = []
+        modules: list[nn.Linear | nn.ReLU | nn.GELU | nn.Tanh | nn.Dropout] = []
         for i, layer in enumerate(layers):
             modules.append(layer)
             if i < len(layers) - 1:
