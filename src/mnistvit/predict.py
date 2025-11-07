@@ -81,7 +81,7 @@ def prediction_loss(
     """
     model.eval()
     loss = 0.0
-    with torch.no_grad():
+    with torch.inference_mode():
         for data, target in data_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
@@ -188,7 +188,7 @@ def eval_output(
         torch.Tensor: Model output.
     """
     model.eval()
-    with torch.no_grad():
+    with torch.inference_mode():
         output = model(data)
     return output
 
