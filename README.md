@@ -1,12 +1,12 @@
 # Python package mnistvit
 
 A PyTorch-only implementation of a vision transformer (ViT) for training on MNIST,
-achieving 99.65% test accuracy with default parameters and without pre-training.
-The ViT architecture and learning parameters can be configured easily.  Code for
+achieving 99.65% test accuracy with default parameters and without pre-training.  The
+ViT architecture and learning parameters can be configured easily.  Code for
 hyperparameter optimization is provided as well.
 
-The code is intended to be used for learning about vision transformers.  With MNIST as
-a simple and well understood dataset, the importance of various hyperparameters can be
+The code is intended to be used for learning about vision transformers.  With MNIST as a
+simple and well understood dataset, the importance of various hyperparameters can be
 explored.
 
 
@@ -56,6 +56,8 @@ For hyperparameter optimization with default search parameters:
 ```
 python -m mnistvit.tune
 ```
+
+A trained model is available on [Hugging Face](https://huggingface.co/asnelt/mnistvit/).
 
 
 ## License
