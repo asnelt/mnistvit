@@ -27,7 +27,7 @@ def preprocess_mnist(
     transform = v2.Compose(
         [
             v2.ToImage(),
-            v2.ToDtype(torch.float32, scale=True),
+            v2.ToDtype(torch.bfloat16, scale=True),
             v2.Normalize((0.1307,), (0.3081,)),
         ]
     )
@@ -113,7 +113,7 @@ def read_digit_image(image_file: str | PathLike) -> torch.FloatTensor:
         [
             v2.CenterCrop(min(image.size()[1:])),
             v2.Resize([28, 28]),
-            v2.ToDtype(torch.float32, scale=True),
+            v2.ToDtype(torch.bfloat16, scale=True),
         ]
     )
     # Standardize image

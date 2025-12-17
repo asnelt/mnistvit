@@ -62,5 +62,5 @@ def load_model(
         os.path.join(model_dir, "model.pt"), map_location=torch.device("cpu")
     )
     model.load_state_dict(state_dict)
-    model = model.to(device)
+    model = model.to(device, dtype=torch.bfloat16)
     return model

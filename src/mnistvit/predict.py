@@ -85,7 +85,7 @@ def prediction_loss(
         for data, target in data_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            loss += loss_fn(output, target).cpu().numpy()
+            loss += loss_fn(output, target).cpu().float().numpy()
     loss /= len(data_loader)
     return loss
 

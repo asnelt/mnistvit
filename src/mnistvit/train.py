@@ -91,7 +91,7 @@ def train_mnist(
     )
     model_config = make_mnist_model_config(config)
     model = VisionTransformer(**model_config)
-    model = model.to(device)
+    model = model.to(device, dtype=torch.bfloat16)
     if resume_states is not None:
         model.load_state_dict(resume_states["model"])
     loss_fn = torch.nn.CrossEntropyLoss()
