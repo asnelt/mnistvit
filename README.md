@@ -19,15 +19,15 @@ The package requires Python 3.10 or greater and additionally requires the `torch
 
 ## Installation
 
-To install the mnistvit package, run the following command in the parent directory of
-the repository:
+To install the mnistvit package, run the following command in the root directory of the
+repository:
 ```
-pip install mnistvit
+pip install .
 ```
 
 To install the package with hyperparameter optimization support:
 ```
-pip install mnistvit[tune]
+pip install ".[tune]"
 ```
 
 
