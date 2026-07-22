@@ -1,7 +1,7 @@
 from os import PathLike
 
 import torch
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, Subset
 from torchvision import datasets
 from torchvision.io import ImageReadMode, decode_image
 from torchvision.transforms import v2
@@ -56,8 +56,8 @@ def get_train_loaders_mnist(
         batch_size (int): Size of the batches of the training loaders.
         train_fraction (float, optional): Fraction of the set used for the training
             loader.  The remainder is used for the validation loader.  Default: 1.0.
-        use_augmentation (bool, optional): If true, augments the dataset with random
-            affine transformations.  Default: `True`.
+        use_augmentation (bool, optional): If true, augments the training set with
+            random affine transformations.  Default: `True`.
 
     Returns:
         tuple: Training loader and validation loader, where the latter is `None` if
@@ -71,9 +71,11 @@ def get_train_loaders_mnist(
         val_loader = None
     else:
         num_train = int(len(dataset) * train_fraction)
-        train_set, val_set = random_split(
-            dataset, [num_train, len(dataset) - num_train]
-        )
+        ind_perm = torch.randperm(len(dataset)).tolist()
+        train_set = Subset(dataset, ind_perm[:num_train])
+        # For the validation set, generate a dataset without augmentation
+        dataset_noaug = preprocess_mnist(data_dir, train=True, use_augmentation=False)
+        val_set = Subset(dataset_noaug, ind_perm[num_train:])
         train_loader = DataLoader(train_set, shuffle=shuffle, batch_size=batch_size)
         val_loader = DataLoader(val_set, shuffle=shuffle, batch_size=batch_size)
     return train_loader, val_loader
