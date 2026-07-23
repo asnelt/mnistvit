@@ -23,7 +23,7 @@ class TrainConfigDict(TypedDict):
     latent_size_multiplier: int
     num_layers: int
     encoder_size: int
-    head_size: int
+    head_size: int | list[int]
     dropout: float
     encoder_activation: EncoderActivation
     head_activation: MLPActivation

@@ -1,5 +1,4 @@
 from math import prod
-from numbers import Number
 from typing import Literal
 
 from torch import Tensor, cat, nn, randn
@@ -166,7 +165,7 @@ class MLP(nn.Module):
         ]
         if dropout is None:
             dropout_modules = []
-        elif isinstance(dropout, Number):
+        elif isinstance(dropout, (int, float)):
             dropout_modules = [nn.Dropout(dropout) for _ in range(len(hidden_sizes))]
         else:
             assert isinstance(dropout, list)

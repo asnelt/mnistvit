@@ -101,7 +101,7 @@ def get_test_loader_mnist(data_dir: str | PathLike, batch_size: int) -> DataLoad
     return loader
 
 
-def read_digit_image(image_file: str | PathLike) -> torch.FloatTensor:
+def read_digit_image(image_file: str | PathLike) -> torch.Tensor:
     """Load a single digit image from a file.
 
     Center crops and resizes the image to 28 by 28 pixels.  Also inverts the image if
@@ -111,7 +111,7 @@ def read_digit_image(image_file: str | PathLike) -> torch.FloatTensor:
         image_file (str or os.PathLike): The image file.
 
     Returns:
-        torch.FloatTensor: The preprocessed digit image.
+        torch.Tensor: The preprocessed digit image.
     """
     image = decode_image(
         image_file, mode=ImageReadMode.GRAY, apply_exif_orientation=True

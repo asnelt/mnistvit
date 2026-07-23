@@ -124,14 +124,14 @@ def prediction_accuracy(
 
 def predict_single_image(
     model: torch.nn.Module,
-    image: torch.FloatTensor,
+    image: torch.Tensor,
     device: str | torch.device = "cpu",
 ) -> int:
     """Use model to classify a digit image.
 
     Args:
         model (torch.nn.Module): Model to use for classification.
-        image (torch.FloatTensor): Preprocessed digit image.
+        image (torch.Tensor): Preprocessed digit image.
         device (str or torch.device, optional): Device to evaluate the model on.
             Default: `'cpu'`.
 
@@ -158,7 +158,7 @@ def classify(
         torch.Tensor: Predicted class labels.
     """
     output = eval_output(model, data)
-    predicted = torch.max(output.data, dim=1)[1]
+    predicted = torch.max(output, dim=1)[1]
     return predicted
 
 
@@ -176,7 +176,7 @@ def class_log_probs(
         torch.Tensor: Log probabilities of classes.
     """
     output = eval_output(model, data)
-    log_probs = torch.nn.functional.log_softmax(output.data, dim=1)
+    log_probs = torch.nn.functional.log_softmax(output, dim=1)
     return log_probs
 
 
