@@ -95,7 +95,7 @@ def train_mnist(
     )
     model_config = make_mnist_model_config(config)
     model = VisionTransformer(**model_config)
-    model = model.to(device, dtype=torch.bfloat16)
+    model = model.to(device)
     if resume_states is not None:
         model.load_state_dict(resume_states["model"])
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -207,6 +207,7 @@ def train(
         start_epoch = resume_states["epoch"] + 1
         optimizer.load_state_dict(resume_states["optimizer"])
         lr_scheduler.load_state_dict(resume_states["lr_scheduler"])
+    device_type = torch.device(device).type
     iters = len(train_loader)
     for epoch in range(start_epoch, num_epochs):
         model.train()
@@ -214,8 +215,9 @@ def train(
         for step, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
-            output = model(data)
-            loss = loss_fn(output, target)
+            with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
+                output = model(data)
+                loss = loss_fn(output, target)
             loss.backward()
             optimizer.step()
             lr_scheduler.step(epoch + step / iters)

@@ -82,12 +82,15 @@ def prediction_loss(
     model.eval()
     loss = 0.0
     num_samples = 0
+    device_type = torch.device(device).type
     with torch.inference_mode():
         for data, target in data_loader:
             batch_size = target.size(0)
             data, target = data.to(device), target.to(device)
-            output = model(data)
-            loss += loss_fn(output, target).item() * batch_size
+            with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
+                output = model(data)
+                batch_loss = loss_fn(output, target)
+            loss += batch_loss.item() * batch_size
             num_samples += batch_size
     loss /= num_samples
     return loss
@@ -143,13 +146,13 @@ def predict_single_image(
 
 def classify(
     model: torch.nn.Module,
-    data: torch.utils.data.Dataset | torch.Tensor,
+    data: torch.Tensor,
 ) -> torch.Tensor:
     """Use model to classify given data.
 
     Args:
         model (torch.nn.Module): Model to use for classification.
-        data (torch.utils.data.Dataset or torch.Tensor): Data to process.
+        data (torch.Tensor): Data to process.
 
     Returns:
         torch.Tensor: Predicted class labels.
@@ -161,13 +164,13 @@ def classify(
 
 def class_log_probs(
     model: torch.nn.Module,
-    data: torch.utils.data.Dataset | torch.Tensor,
+    data: torch.Tensor,
 ) -> torch.Tensor:
     """Evaluate model log probabilities of all classes on given data.
 
     Args:
         model (torch.nn.Module): Model to use for evaluation.
-        data (torch.utils.data.Dataset or torch.Tensor): Data to process.
+        data (torch.Tensor): Data to process.
 
     Returns:
         torch.Tensor: Log probabilities of classes.
@@ -179,19 +182,22 @@ def class_log_probs(
 
 def eval_output(
     model: torch.nn.Module,
-    data: torch.utils.data.Dataset | torch.Tensor,
+    data: torch.Tensor,
 ) -> torch.Tensor:
     """Evaluate the output of a model on given data.
 
     Args:
         model (torch.nn.Module): Model to use for evaluation.
-        data (torch.utils.data.Dataset or torch.Tensor): Data to process.
+        data (torch.Tensor): Data to process.
 
     Returns:
         torch.Tensor: Model output.
     """
     model.eval()
-    with torch.inference_mode():
+    with (
+        torch.inference_mode(),
+        torch.autocast(device_type=data.device.type, dtype=torch.bfloat16),
+    ):
         output = model(data)
     return output
 
