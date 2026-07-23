@@ -162,6 +162,9 @@ def fit(
         mode=mode,
     )
     print("Best result config: ", best_result.config)
+    if best_checkpoint is None:
+        print("No checkpoint for best result available!")
+        return
     print("Best checkpoint: ", best_checkpoint.get_metadata())
     with best_checkpoint.as_directory() as checkpoint_dir:
         state_dict = torch.load(
