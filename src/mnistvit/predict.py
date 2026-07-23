@@ -81,12 +81,15 @@ def prediction_loss(
     """
     model.eval()
     loss = 0.0
+    num_samples = 0
     with torch.inference_mode():
         for data, target in data_loader:
+            batch_size = target.size(0)
             data, target = data.to(device), target.to(device)
             output = model(data)
-            loss += loss_fn(output, target).cpu().float().numpy()
-    loss /= len(data_loader)
+            loss += loss_fn(output, target).item() * batch_size
+            num_samples += batch_size
+    loss /= num_samples
     return loss
 
 
@@ -134,7 +137,7 @@ def predict_single_image(
     """
     data = image.unsqueeze(0)  # Add batch dimension
     data = data.to(device)
-    predicted = int(classify(model, data).cpu().item())
+    predicted = int(classify(model, data).item())
     return predicted
 
 
