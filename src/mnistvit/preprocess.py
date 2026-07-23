@@ -130,5 +130,5 @@ def read_digit_image(image_file: str | PathLike) -> torch.FloatTensor:
     # Check if we need to invert the image
     if (image > 0).count_nonzero() > image.numel() / 2:
         # More bright than dark pixels
-        image = v2.functional.invert(image)
+        image = -image
     return image
