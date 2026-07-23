@@ -8,6 +8,7 @@ from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.optuna import OptunaSearch
 
+from .preprocess import preprocess_mnist
 from .train import TrainConfigDict, make_mnist_model_config, train_mnist
 from .utils import get_device, save_model
 
@@ -62,6 +63,9 @@ def objective(config: dict[str, Any], data_dir: str | os.PathLike) -> None:
     else:
         resume_states = None
 
+    # Fix train-validation split for consistency across trials
+    split_seed = 0
+
     train_config = cast(TrainConfigDict, config)
     train_mnist(
         config=train_config,
@@ -69,6 +73,7 @@ def objective(config: dict[str, Any], data_dir: str | os.PathLike) -> None:
         report_fn=report_fn,
         resume_states=resume_states,
         device=device,
+        split_seed=split_seed,
     )
 
 
@@ -112,6 +117,8 @@ def fit(
         "head_activation": "gelu",
     }
     data_dir = os.path.abspath("data")
+    # Ensure dataset availability to avoid trial race condition
+    preprocess_mnist(data_dir, train=True)
     trainable = tune.with_parameters(objective, data_dir=data_dir)
     metric, mode = "mean_loss", "min"
     if resources is not None:

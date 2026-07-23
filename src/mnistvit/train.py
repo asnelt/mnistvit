@@ -60,6 +60,7 @@ def train_mnist(
     ) = None,
     resume_states: ResumeStatesDict | None = None,
     device: str | torch.device = "cpu",
+    split_seed: int | None = None,
 ) -> None:
     """Train a single model on MNIST and eventually save the model.
 
@@ -81,6 +82,8 @@ def train_mnist(
             resume.  Default: `None`.
         device (str or torch.device, optional): Device to train the model on.
             Default: `'cpu'`.
+        split_seed (int or None, optional): Seed for the train-validation split.
+            Default: `None`.
     """
     train_fraction = 0.8 if use_validation else 1.0
     train_loader, val_loader = get_train_loaders_mnist(
@@ -88,6 +91,7 @@ def train_mnist(
         batch_size=config["batch_size"],
         train_fraction=train_fraction,
         use_augmentation=use_augmentation,
+        split_seed=split_seed,
     )
     model_config = make_mnist_model_config(config)
     model = VisionTransformer(**model_config)

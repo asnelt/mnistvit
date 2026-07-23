@@ -48,6 +48,7 @@ def get_train_loaders_mnist(
     batch_size: int,
     train_fraction: float = 1.0,
     use_augmentation: bool = True,
+    split_seed: int | None = None,
 ) -> tuple[DataLoader, DataLoader | None]:
     """Get training loaders of the MNIST dataset.
 
@@ -58,6 +59,8 @@ def get_train_loaders_mnist(
             loader.  The remainder is used for the validation loader.  Default: 1.0.
         use_augmentation (bool, optional): If true, augments the training set with
             random affine transformations.  Default: `True`.
+        split_seed (int or None, optional): Seed for the train-validation split.
+            Default: `None`.
 
     Returns:
         tuple: Training loader and validation loader, where the latter is `None` if
@@ -71,7 +74,8 @@ def get_train_loaders_mnist(
         val_loader = None
     else:
         num_train = int(len(dataset) * train_fraction)
-        ind_perm = torch.randperm(len(dataset)).tolist()
+        generator = None if seed is None else torch.Generator().manual_seed(seed)
+        ind_perm = torch.randperm(len(dataset), generator=generator).tolist()
         train_set = Subset(dataset, ind_perm[:num_train])
         # For the validation set, generate a dataset without augmentation
         dataset_noaug = preprocess_mnist(data_dir, train=True, use_augmentation=False)
