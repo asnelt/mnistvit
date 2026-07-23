@@ -123,7 +123,8 @@ def make_mnist_model_config(train_config: TrainConfigDict) -> dict[str, Any]:
     initialize a vision transformer for training on MNIST.
 
     Args:
-        config (TrainConfigDict): Training configuration with model hyperparameters.
+        train_config (TrainConfigDict): Training configuration with model
+            hyperparameters.
 
     Returns:
         model_config (dict): The vision transformer initialization configuration.
