@@ -125,7 +125,7 @@ def read_digit_image(image_file: str | PathLike) -> torch.Tensor:
     )
     image = transform(image)
     # For robustness, standardize with image statistics rather than MNIST statistics
-    image = v2.Normalize((image.mean(),), (image.std(),))(image)
+    image = v2.Normalize((image.mean(),), (image.std().clamp(min=1e-7),))(image)
     # Check if we need to invert the image
     if (image > 0).count_nonzero() > image.numel() / 2:
         # More bright than dark pixels
