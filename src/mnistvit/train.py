@@ -210,6 +210,7 @@ def train(
     iters = len(train_loader)
     for epoch in range(start_epoch, num_epochs):
         model.train()
+        train_loss = 0.0
         for step, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
@@ -218,12 +219,14 @@ def train(
             loss.backward()
             optimizer.step()
             lr_scheduler.step(epoch + step / iters)
+            train_loss += loss.item()
+        train_loss /= iters
         if val_loader is None:
             val_loss = None
         else:
             val_loss = prediction_loss(model, val_loader, loss_fn, device)
         if report_fn is not None:
-            report_fn(epoch, loss, val_loss, model, optimizer, lr_scheduler)
+            report_fn(epoch, train_loss, val_loss, model, optimizer, lr_scheduler)
 
 
 def main() -> None:
