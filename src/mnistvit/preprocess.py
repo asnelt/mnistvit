@@ -74,7 +74,9 @@ def get_train_loaders_mnist(
         val_loader = None
     else:
         num_train = int(len(dataset) * train_fraction)
-        generator = None if seed is None else torch.Generator().manual_seed(seed)
+        generator = (
+            None if split_seed is None else torch.Generator().manual_seed(split_seed)
+        )
         ind_perm = torch.randperm(len(dataset), generator=generator).tolist()
         train_set = Subset(dataset, ind_perm[:num_train])
         # For the validation set, generate a dataset without augmentation
