@@ -68,9 +68,8 @@ def get_train_loaders_mnist(
     """
     assert 0 <= train_fraction <= 1
     dataset = preprocess_mnist(data_dir, train=True, use_augmentation=use_augmentation)
-    shuffle = True
     if train_fraction == 1.0:
-        train_loader = DataLoader(dataset, shuffle=shuffle, batch_size=batch_size)
+        train_loader = DataLoader(dataset, shuffle=True, batch_size=batch_size)
         val_loader = None
     else:
         num_train = int(len(dataset) * train_fraction)
@@ -82,8 +81,8 @@ def get_train_loaders_mnist(
         # For the validation set, generate a dataset without augmentation
         dataset_noaug = preprocess_mnist(data_dir, train=True, use_augmentation=False)
         val_set = Subset(dataset_noaug, ind_perm[num_train:])
-        train_loader = DataLoader(train_set, shuffle=shuffle, batch_size=batch_size)
-        val_loader = DataLoader(val_set, shuffle=shuffle, batch_size=batch_size)
+        train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size)
+        val_loader = DataLoader(val_set, shuffle=False, batch_size=batch_size)
     return train_loader, val_loader
 
 
