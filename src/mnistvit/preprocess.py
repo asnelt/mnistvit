@@ -122,8 +122,8 @@ def read_digit_image(image_file: str | PathLike) -> torch.FloatTensor:
             v2.ToDtype(torch.bfloat16, scale=True),
         ]
     )
-    # Standardize image
     image = transform(image)
+    # For robustness, standardize with image statistics rather than MNIST statistics
     image = v2.Normalize((image.mean(),), (image.std(),))(image)
     # Check if we need to invert the image
     if (image > 0).count_nonzero() > image.numel() / 2:
