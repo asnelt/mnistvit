@@ -212,7 +212,7 @@ def train(
     iters = len(train_loader)
     for epoch in range(start_epoch, num_epochs):
         model.train()
-        train_loss = torch.zeros((), device=device)
+        train_loss_sum = torch.zeros((), device=device)
         num_samples = 0
         for step, (data, target) in enumerate(train_loader):
             batch_size = target.size(0)
@@ -224,9 +224,9 @@ def train(
             loss.backward()
             optimizer.step()
             lr_scheduler.step(epoch + step / iters)
-            train_loss += loss.detach() * batch_size
+            train_loss_sum += loss.detach() * batch_size
             num_samples += batch_size
-        train_loss = train_loss.item() / num_samples
+        train_loss = train_loss_sum.item() / num_samples
         if val_loader is None:
             val_loss = None
         else:
