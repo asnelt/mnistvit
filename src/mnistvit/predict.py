@@ -80,7 +80,7 @@ def prediction_loss(
         float: Calculated loss.
     """
     model.eval()
-    loss = 0.0
+    loss = torch.zeros((), device=device)
     num_samples = 0
     device_type = torch.device(device).type
     with torch.inference_mode():
@@ -90,9 +90,9 @@ def prediction_loss(
             with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
                 output = model(data)
                 batch_loss = loss_fn(output, target)
-            loss += batch_loss.item() * batch_size
+            loss += batch_loss * batch_size
             num_samples += batch_size
-    loss /= num_samples
+    loss = loss.item() / num_samples
     return loss
 
 
