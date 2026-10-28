@@ -58,7 +58,9 @@ def objective(config: dict[str, Any], data_dir: str | os.PathLike) -> None:
     checkpoint = tune.get_checkpoint()
     if checkpoint:
         with checkpoint.as_directory() as checkpoint_dir:
-            resume_states = torch.load(os.path.join(checkpoint_dir, "checkpoint.pt"))
+            resume_states = torch.load(
+                os.path.join(checkpoint_dir, "checkpoint.pt"), map_location=device
+            )
             resume_states["epoch"] = checkpoint.get_metadata()["epoch"]
     else:
         resume_states = None
