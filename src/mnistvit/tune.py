@@ -149,7 +149,7 @@ def fit(
             tune_config=tune.TuneConfig(
                 num_samples=num_samples,
                 search_alg=OptunaSearch(),
-                scheduler=ASHAScheduler(),
+                scheduler=ASHAScheduler(max_t=num_epochs),
                 metric=metric,
                 mode=mode,
             ),
