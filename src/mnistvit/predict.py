@@ -176,7 +176,7 @@ def class_log_probs(
         torch.Tensor: Log probabilities of classes.
     """
     output = eval_output(model, data)
-    log_probs = torch.nn.functional.log_softmax(output, dim=1)
+    log_probs = torch.nn.functional.log_softmax(output.float(), dim=1)
     return log_probs
 
 
