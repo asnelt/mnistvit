@@ -247,6 +247,9 @@ def main() -> None:
               (default: None, meaning 'cuda' if available, else 'cpu')",
     )
     args = parser.parse_args()
+    if args.image_file is None and not (args.use_loss or args.use_accuracy):
+        parser.print_help()
+        return
     device = get_device(args.device)
     config = {
         "batch_size": args.batch_size,
