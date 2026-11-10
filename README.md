@@ -12,9 +12,9 @@ explored.
 
 ## Requirements
 
-The package requires Python 3.12 or greater and additionally requires the `torch` and
-`torchvision` packages.  For hyperparameter optimization, additionally `ray[tune]` and
-`optuna` are required.  The ViT itself requires `torch` only.
+The package requires Python 3.12 or greater and additionally requires the `torch`,
+`torchcodec` and `torchvision` packages.  For hyperparameter optimization, additionally
+`ray[tune]` and `optuna` are required.  The ViT itself requires `torch` only.
 
 
 ## Installation

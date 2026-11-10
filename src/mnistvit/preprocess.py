@@ -1,9 +1,9 @@
-from os import PathLike
+from os import PathLike, fspath
 
 import torch
 from torch.utils.data import DataLoader, Subset
+from torchcodec.decoders import decode_image
 from torchvision import datasets
-from torchvision.io import ImageReadMode, decode_image
 from torchvision.transforms import v2
 
 
@@ -113,9 +113,7 @@ def read_digit_image(image_file: str | PathLike) -> torch.Tensor:
     Returns:
         torch.Tensor: The preprocessed digit image.
     """
-    image = decode_image(
-        image_file, mode=ImageReadMode.GRAY, apply_exif_orientation=True
-    )
+    image = decode_image(fspath(image_file), mode="GRAY")
     transform = v2.Compose(
         [
             v2.CenterCrop(min(image.size()[1:])),
