@@ -7,7 +7,7 @@ from .preprocess import get_test_loader_mnist, read_digit_image
 from .utils import get_device, load_model
 
 
-def test_mnist(
+def evaluate_mnist(
     config: dict[str, int],
     data_dir: str | os.PathLike,
     model_dir: str | os.PathLike,
@@ -258,7 +258,7 @@ def main() -> None:
         predicted = predict_file(args.image_file, args.model_dir, device)
         print(predicted)
     if args.use_loss or args.use_accuracy:
-        test_mnist(
+        evaluate_mnist(
             config,
             data_dir=os.path.abspath("data"),
             model_dir=os.path.abspath(args.model_dir),
