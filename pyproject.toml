@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mnistvit"
-version = "1.5.3"
+version = "1.5.4"
 authors = [
     {name = "Arno Onken", email = "asnelt@asnelt.org"},
 ]
@@ -18,9 +18,9 @@ license-files = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "torch>=2.6",
+    "torch>=2.11",
     "torchcodec>=0.16",
-    "torchvision>=0.21",
+    "torchvision>=0.26",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
